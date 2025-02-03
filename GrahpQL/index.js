@@ -27,7 +27,6 @@ const typeDefs = gql`
     daily_energy_kWh: Float
   }
 
-  # Promedios diarios
   type DailyAverage {
     device_type: String
     day: String
@@ -35,20 +34,24 @@ const typeDefs = gql`
     avg_humidity: Float
   }
 
-  # Consultas disponibles
+  type MonthlyAverage {
+    device_type: String
+    month: String
+    avg_temperature: Float
+    avg_humidity: Float
+  }
+
   type Query {
-    # Obtener todos los dispositivos
     devices: [IoTDevice]
-    
-    # Obtener promedios diarios por tipo de dispositivo
-    dailyAverages(device_type: String): [DailyAverage]
+    dailyAverages(day: String!, device_type: String): [DailyAverage]
+    monthlyAverages(year: Int!, device_type: String!): [MonthlyAverage]
+    availableYears(device_type: String!): [Int]
   }
 `;
 
 const resolvers = {
   Query: {
-    // Obtener promedios diarios
-    dailyAverages: async (_, { device_type }) => {
+    dailyAverages: async (_, { day, device_type }) => {
       const query = `
         SELECT 
           device_type, 
@@ -56,23 +59,58 @@ const resolvers = {
           AVG(temperature_C) AS avg_temperature, 
           AVG(humidity_relative) AS avg_humidity
         FROM iot_devices
-        ${device_type ? `WHERE device_type = $1` : ""}
+        WHERE time_bucket('1 day', time) = $1
+        ${device_type ? `AND device_type = $2` : ""}
         GROUP BY device_type, day
         ORDER BY day;
       `;
-      const values = device_type ? [device_type] : [];
+      const values = device_type ? [day, device_type] : [day];
       const result = await pool.query(query, values);
       return result.rows.map(row => ({
         device_type: row.device_type,
-        day: row.day.toISOString(), // Asegurarse de formatear la fecha
+        day: row.day.toISOString(),
         avg_temperature: row.avg_temperature,
         avg_humidity: row.avg_humidity,
       }));
     },
+
+    monthlyAverages: async (_, { year, device_type }) => {
+      const query = `
+        SELECT 
+          device_type, 
+          trim(to_char(time, 'TMMonth')) AS month,
+          AVG(temperature_C) AS avg_temperature, 
+          AVG(humidity_relative) AS avg_humidity
+        FROM iot_devices
+        WHERE EXTRACT(YEAR FROM time) = $1
+          AND device_type = $2
+        GROUP BY device_type, month
+        ORDER BY MIN(time);
+      `;
+      const values = [year, device_type];
+      const result = await pool.query(query, values);
+      return result.rows.map(row => ({
+        device_type: row.device_type,
+        month: row.month,
+        avg_temperature: row.avg_temperature,
+        avg_humidity: row.avg_humidity,
+      }));
+    },
+
+    availableYears: async (_, { device_type }) => {
+      const query = `
+        SELECT DISTINCT EXTRACT(YEAR FROM time) AS year
+        FROM iot_devices
+        WHERE device_type = $1
+        ORDER BY year;
+      `;
+      const values = [device_type];
+      const result = await pool.query(query, values);
+      return result.rows.map(row => row.year);
+    },
   },
 };
 
-// Crear y lanzar el servidor Apollo
 const server = new ApolloServer({ typeDefs, resolvers });
 
 server.listen().then(({ url }) => {
