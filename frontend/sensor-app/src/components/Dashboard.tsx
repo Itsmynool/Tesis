@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { Bar, Line } from 'react-chartjs-2';
+import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
-  BarElement,
   PointElement,
   LineElement,
   Title,
@@ -14,8 +13,9 @@ import {
   Legend,
 } from 'chart.js';
 import { DashboardProps, SensorData } from '../types';
+import { FaWater, FaCloud, FaLightbulb, FaWalking, FaSmog } from 'react-icons/fa';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
   const [availableDevices, setAvailableDevices] = useState<string[]>([]);
@@ -23,7 +23,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
   const [data, setData] = useState<SensorData | null>(null);
   const [history, setHistory] = useState<SensorData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [showHistory, setShowHistory] = useState<string | null>(null); // Para mostrar el historial de un dato
+  const [showHistory, setShowHistory] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -49,7 +49,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
     };
 
     fetchAvailableDevices();
-    const interval = setInterval(fetchAvailableDevices, 300000); // Actualizar cada 5 minutos
+    const interval = setInterval(fetchAvailableDevices, 300000);
     return () => clearInterval(interval);
   }, [token, selectedDevice]);
 
@@ -91,22 +91,9 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
     const interval = setInterval(() => {
       fetchData();
       fetchHistory();
-    }, 300000); // Actualizar cada 5 minutos
+    }, 300000);
     return () => clearInterval(interval);
   }, [selectedDevice, token]);
-
-  const getRealTimeChartData = (dataKey: string, value: number) => ({
-    labels: [dataKey],
-    datasets: [
-      {
-        label: dataKey.charAt(0).toUpperCase() + dataKey.slice(1),
-        data: [value],
-        backgroundColor: getColor(dataKey),
-        borderColor: getColor(dataKey),
-        borderWidth: 1,
-      },
-    ],
-  });
 
   const updateHistoryChartData = (dataKey: string) => {
     if (history.length > 0) {
@@ -210,35 +197,138 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
             </div>
           </div>
 
-          {/* Datos en Tiempo Real con Gráficos */}
+          {/* Datos en Tiempo Real con Representaciones Personalizadas */}
           <div className="bg-white p-6 rounded-xl shadow-lg">
             <h2 className="text-2xl font-semibold text-gray-800 mb-4">Datos en Tiempo Real</h2>
             {data ? (
               <div className="grid grid-cols-1 gap-6">
-                {['temp', 'humidity', 'co', 'lpg', 'light', 'motion', 'smoke'].map(dataKey => (
-                  <div key={dataKey} className="p-4 bg-blue-50 rounded-lg">
-                    <h3 className="text-lg font-medium text-blue-700">
-                      {dataKey.charAt(0).toUpperCase() + dataKey.slice(1)}
-                    </h3>
-                    <div className="h-32">
-                      <Bar
-                        data={getRealTimeChartData(dataKey, data[dataKey as keyof SensorData] as number)}
-                        options={{
-                          responsive: true,
-                          maintainAspectRatio: false,
-                          plugins: { legend: { display: false } },
-                          scales: { y: { beginAtZero: true } },
+                {/* Temperatura - Termómetro Personalizado con CSS */}
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <h3 className="text-lg font-medium text-blue-700">Temperatura</h3>
+                  <div className="flex justify-center items-center">
+                    <div className="relative w-16 h-48 border-2 border-gray-300 rounded-lg bg-gray-100">
+                      <div
+                        className="absolute bottom-0 w-full bg-red-500"
+                        style={{
+                          height: `${(data.temp / 50) * 100}%`,
+                          transition: 'height 0.5s ease-in-out',
                         }}
                       />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-lg font-bold text-gray-800">{data.temp}°C</span>
+                      </div>
+                      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-8 h-8 bg-red-500 rounded-full border-2 border-gray-300" />
                     </div>
-                    <button
-                      onClick={() => setShowHistory(dataKey)}
-                      className="mt-2 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-                    >
-                      Ver Historial
-                    </button>
                   </div>
-                ))}
+                  <button
+                    onClick={() => setShowHistory('temp')}
+                    className="mt-2 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                  >
+                    Ver Historial
+                  </button>
+                </div>
+
+                {/* Humedad - Gota */}
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <h3 className="text-lg font-medium text-blue-700">Humedad</h3>
+                  <div className="relative w-32 h-32 mx-auto">
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-4xl text-blue-600">
+                      {data.humidity}%
+                    </div>
+                    <FaWater className="w-full h-full text-blue-400" />
+                  </div>
+                  <button
+                    onClick={() => setShowHistory('humidity')}
+                    className="mt-2 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                  >
+                    Ver Historial
+                  </button>
+                </div>
+
+                {/* CO - Nube */}
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <h3 className="text-lg font-medium text-blue-700">CO</h3>
+                  <div className="relative w-32 h-32 mx-auto">
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-4xl text-gray-700">
+                      {data.co}
+                    </div>
+                    <FaCloud className="w-full h-full text-gray-400" />
+                  </div>
+                  <button
+                    onClick={() => setShowHistory('co')}
+                    className="mt-2 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                  >
+                    Ver Historial
+                  </button>
+                </div>
+
+                {/* LPG - Valor Genérico */}
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <h3 className="text-lg font-medium text-blue-700">LPG</h3>
+                  <div className="text-4xl text-yellow-600 text-center">{data.lpg}</div>
+                  <button
+                    onClick={() => setShowHistory('lpg')}
+                    className="mt-2 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                  >
+                    Ver Historial
+                  </button>
+                </div>
+
+                {/* Light - Prendido/Apagado */}
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <h3 className="text-lg font-medium text-blue-700">Luz</h3>
+                  <div className="text-5xl text-center">
+                    {data.light ? (
+                      <FaLightbulb className="text-yellow-400" />
+                    ) : (
+                      <FaLightbulb className="text-gray-400" />
+                    )}
+                    <span className="ml-2 text-3xl">
+                      {data.light ? 'Prendido' : 'Apagado'}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setShowHistory('light')}
+                    className="mt-2 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                  >
+                    Ver Historial
+                  </button>
+                </div>
+
+                {/* Motion - Movimiento */}
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <h3 className="text-lg font-medium text-blue-700">Movimiento</h3>
+                  <div className="text-5xl text-center">
+                    <FaWalking className="text-orange-400" />
+                    <span className="ml-2 text-3xl">
+                      {data.motion ? 'Sí' : 'No'}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setShowHistory('motion')}
+                    className="mt-2 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                  >
+                    Ver Historial
+                  </button>
+                </div>
+
+                {/* Smoke - Humo */}
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <h3 className="text-lg font-medium text-blue-700">Humo</h3>
+                  <div className="relative w-32 h-32 mx-auto">
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-4xl text-gray-700">
+                      {data.smoke ? 'Sí' : 'No'}
+                    </div>
+                    <FaSmog className="w-full h-full text-gray-500" />
+                  </div>
+                  <button
+                    onClick={() => setShowHistory('smoke')}
+                    className="mt-2 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                  >
+                    Ver Historial
+                  </button>
+                </div>
+
                 <div className="p-3 bg-blue-50 rounded-lg col-span-1">
                   <strong className="text-blue-700">Última actualización:</strong>{' '}
                   {new Date(data.ts).toLocaleString('es-ES')}
