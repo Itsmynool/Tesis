@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios, { AxiosError } from 'axios';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { AuthProps } from '../types';
+import LoginForm from './LoginForm';
+import anime from 'animejs';
 
 interface ErrorResponse {
   message: string;
@@ -39,43 +41,55 @@ const Login: React.FC<AuthProps> = ({ setToken }) => {
     }
   };
 
+  // SVG animation logic (ajustada para el nuevo tamaño)
+  useEffect(() => {
+    let current: anime.AnimeInstance | null = null;
+
+    const animatePath = (strokeDashoffset: number) => {
+      if (current) current.pause();
+      current = anime({
+        targets: 'path',
+        strokeDashoffset: {
+          value: strokeDashoffset,
+          duration: 700,
+          easing: 'easeOutQuart',
+        },
+        strokeDasharray: {
+          value: '600 3386', // Ajustado para el nuevo tamaño del SVG
+          duration: 700,
+          easing: 'easeOutQuart',
+        },
+      });
+    };
+
+    const usernameInput = document.querySelector('#username');
+    const passwordInput = document.querySelector('#password');
+    const submitButton = document.querySelector('#submit');
+
+    // Animación inicial para que el SVG sea visible
+    animatePath(0);
+
+    // Animaciones al enfocar cada campo
+    usernameInput?.addEventListener('focus', () => animatePath(0));
+    passwordInput?.addEventListener('focus', () => animatePath(-336));
+    submitButton?.addEventListener('focus', () => animatePath(-730));
+
+    return () => {
+      usernameInput?.removeEventListener('focus', () => {});
+      passwordInput?.removeEventListener('focus', () => {});
+      submitButton?.removeEventListener('focus', () => {});
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-center">Iniciar Sesión</h2>
-        {error && <p className="text-red-500 mb-4">{error}</p>}
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700">Nombre de usuario</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full p-2 border rounded"
-              placeholder="Ingrese su usuario"
-              required
-            />
-          </div>
-          <div className="mb-6">
-            <label className="block text-gray-700">Contraseña</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-2 border rounded"
-              placeholder="Ingrese su contraseña"
-              required
-            />
-          </div>
-          <button type="submit" className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
-            Iniciar Sesión
-          </button>
-        </form>
-        <p className="mt-4 text-center">
-          ¿No tienes una cuenta? <Link to="/signup" className="text-blue-500 hover:underline">Regístrate</Link>
-        </p>
-      </div>
-    </div>
+    <LoginForm
+      username={username}
+      setUsername={setUsername}
+      password={password}
+      setPassword={setPassword}
+      error={error}
+      handleSubmit={handleSubmit}
+    />
   );
 };
 

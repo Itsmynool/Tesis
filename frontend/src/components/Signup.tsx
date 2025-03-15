@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios, { AxiosError } from 'axios';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { AuthProps } from '../types';
+import SignupForm from './SignupForm';
+import anime from 'animejs';
 
 interface ErrorResponse {
   message: string;
@@ -40,43 +42,59 @@ const Signup: React.FC<AuthProps> = ({ setToken }) => {
     }
   };
 
+  // SVG animation logic (ajustada para el nuevo tamaño)
+  useEffect(() => {
+    let current: anime.AnimeInstance | null = null;
+
+    const animatePath = (strokeDashoffset: number) => {
+      if (current) current.pause();
+      current = anime({
+        targets: 'path',
+        strokeDashoffset: {
+          value: strokeDashoffset,
+          duration: 700,
+          easing: 'easeOutQuart',
+        },
+        strokeDasharray: {
+          value: '600 3386', // Ajustado para el nuevo tamaño del SVG
+          duration: 700,
+          easing: 'easeOutQuart',
+        },
+      });
+    };
+
+    const usernameInput = document.querySelector('#username');
+    const passwordInput = document.querySelector('#password');
+    const submitButton = document.querySelector('#submit');
+
+    // Animación inicial para que el SVG sea visible
+    animatePath(0);
+
+    // Animaciones al enfocar cada campo
+    const handleUsernameFocus = () => animatePath(0);
+    const handlePasswordFocus = () => animatePath(-336);
+    const handleSubmitFocus = () => animatePath(-730);
+
+    usernameInput?.addEventListener('focus', handleUsernameFocus);
+    passwordInput?.addEventListener('focus', handlePasswordFocus);
+    submitButton?.addEventListener('focus', handleSubmitFocus);
+
+    return () => {
+      usernameInput?.removeEventListener('focus', handleUsernameFocus);
+      passwordInput?.removeEventListener('focus', handlePasswordFocus);
+      submitButton?.removeEventListener('focus', handleSubmitFocus);
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-center">Registrarse</h2>
-        {error && <p className="text-red-500 mb-4">{error}</p>}
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700">Nombre de usuario</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full p-2 border rounded"
-              placeholder="Ingrese su usuario"
-              required
-            />
-          </div>
-          <div className="mb-6">
-            <label className="block text-gray-700">Contraseña</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-2 border rounded"
-              placeholder="Ingrese su contraseña"
-              required
-            />
-          </div>
-          <button type="submit" className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
-            Registrarse
-          </button>
-        </form>
-        <p className="mt-4 text-center">
-          ¿Ya tienes una cuenta? <Link to="/login" className="text-blue-500 hover:underline">Inicia sesión</Link>
-        </p>
-      </div>
-    </div>
+    <SignupForm
+      username={username}
+      setUsername={setUsername}
+      password={password}
+      setPassword={setPassword}
+      error={error}
+      handleSubmit={handleSubmit}
+    />
   );
 };
 
