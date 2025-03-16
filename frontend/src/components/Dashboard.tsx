@@ -351,6 +351,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
         )}
 
         {/* Mapa interactivo para seleccionar dispositivos */}
+        {/*
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-white mb-4">Selecciona un dispositivo en el mapa</h2>
           {deviceLocations.length > 0 ? (
@@ -393,6 +394,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
             <p className="text-gray-400">No hay ubicaciones disponibles para los dispositivos.</p>
           )}
         </div>
+        */}
 
         <DashboardForm
           availableDevices={availableDevices}

@@ -16,11 +16,21 @@ const AirQualityGauge: React.FC<AirQualityGaugeProps> = ({ airQuality }) => {
   useEffect(() => {
     const clampedAirQuality = Math.min(100, Math.max(0, airQuality));
 
+    // Determinar el color basado en el porcentaje de calidad del aire
+    let barColor = '#22c55e'; // Verde claro por defecto (excelente)
+    if (clampedAirQuality <= 80 && clampedAirQuality > 60) {
+      barColor = '#facc15'; // Amarillo claro (bueno)
+    } else if (clampedAirQuality <= 60 && clampedAirQuality > 30) {
+      barColor = '#f97316'; // Naranja (moderado)
+    } else if (clampedAirQuality <= 30) {
+      barColor = '#6b21a8'; // Morado oscuro (malo)
+    }
+
     const data = {
       datasets: [
         {
           data: [clampedAirQuality, 100 - clampedAirQuality],
-          backgroundColor: ['rgba(75, 192, 192, 0.6)', 'rgba(255, 99, 132, 0.2)'],
+          backgroundColor: [barColor, 'rgba(255, 255, 255, 0.2)'],
           borderWidth: 0,
           circumference: 180,
           rotation: -90,

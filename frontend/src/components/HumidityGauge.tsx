@@ -16,11 +16,21 @@ const HumidityGauge: React.FC<HumidityGaugeProps> = ({ humidity }) => {
   useEffect(() => {
     const clampedHumidity = Math.min(100, Math.max(0, humidity));
 
+    // Determinar el color basado en el porcentaje de humedad (usando tonos de azul)
+    let barColor = '#dbeafe'; // Azul muy claro por defecto (bajo)
+    if (clampedHumidity > 30 && clampedHumidity <= 60) {
+      barColor = '#60a5fa'; // Azul medio claro (moderado)
+    } else if (clampedHumidity > 60 && clampedHumidity <= 80) {
+      barColor = '#2563eb'; // Azul medio (alto)
+    } else if (clampedHumidity > 80) {
+      barColor = '#1e3a8a'; // Azul oscuro (muy crítico)
+    }
+
     const data = {
       datasets: [
         {
           data: [clampedHumidity, 100 - clampedHumidity],
-          backgroundColor: ['#3b82f6', 'rgba(255, 255, 255, 0.2)'],
+          backgroundColor: [barColor, 'rgba(255, 255, 255, 0.2)'],
           borderWidth: 0,
           circumference: 180,
           rotation: -90,
@@ -53,17 +63,15 @@ const HumidityGauge: React.FC<HumidityGaugeProps> = ({ humidity }) => {
   };
 
   return (
-    <div className="relative w-20 h-20 flex-shrink-0">
+    <div className="relative w-20 h-20 flex-shrink-0 overflow-hidden">
       <div className="w-full h-full">
         <Doughnut data={chartData} options={options} />
       </div>
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-        <div className="text-lg font-bold text-white">{humidity.toFixed(1)}%</div>
-        <div className="text-xs text-gray-400">Value</div>
-      </div>
-      <div className="absolute bottom-0 left-0 right-0 flex justify-between px-2 pointer-events-none">
-        <span className="text-xs text-white">0</span>
-        <span className="text-xs text-white">100</span>
+      <div className="absolute inset-0 flex items-center justify-center text-center pointer-events-none">
+        <div>
+          <div className="text-lg font-bold text-white">{humidity.toFixed(0)}%</div>
+          <div className="text-xs text-gray-400">Índice</div>
+        </div>
       </div>
     </div>
   );

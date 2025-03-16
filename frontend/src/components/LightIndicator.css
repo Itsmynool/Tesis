@@ -1,35 +1,47 @@
-/* components/LightIndicator.css */
 .light {
-    position: relative;
-    width: 20px;
-    height: 20px;
-    background: #555;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.2), inset 0 2px 2px rgba(0, 0, 0, 0.2);
-    transition: all 0.3s ease;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.light.on {
+  background-color: #ffd700; /* Color dorado para encendido */
+  box-shadow: 0 0 10px #ffd700, 0 0 20px #ffd700;
+}
+
+.light.off {
+  background-color: #555; /* Color gris para apagado */
+  box-shadow: none;
+}
+
+.glow {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.5);
+  opacity: 0;
+}
+
+.light.on .glow {
+  opacity: 1;
+  animation: glow 1.5s infinite;
+}
+
+@keyframes glow {
+  0% {
+    transform: scale(1);
+    opacity: 1;
   }
-  
-  .light.on {
-    background: #00ff00; /* Verde cuando está encendido */
-    box-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00, 0 0 30px #00ff00, inset 0 2px 2px rgba(0, 0, 0, 0.2);
-    transform: scale(1.1);
+  50% {
+    transform: scale(1.2);
+    opacity: 0.5;
   }
-  
-  .glow {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: inherit;
-    border-radius: 50%;
-    filter: blur(5px);
-    opacity: 0;
-    transition: opacity 0.3s ease;
+  100% {
+    transform: scale(1);
+    opacity: 1;
   }
-  
-  .light.on .glow {
-    opacity: 0.7;
-  }
+}

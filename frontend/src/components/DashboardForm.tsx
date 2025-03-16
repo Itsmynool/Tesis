@@ -321,6 +321,8 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+        {/*
         <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md col-span-1 md:col-span-2 lg:col-span-4">
           <h2 className="text-lg font-semibold text-white mb-2">Resumen de Sensores</h2>
           <div className="h-48">
@@ -353,15 +355,20 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
             </button>
           </div>
         </div>
+        */}
 
-        <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-center min-h-[200px]">
-          <h2 className="text-sm font-semibold text-white mb-2">Temperatura, °C</h2>
-          <TemperatureGauge temperature={data?.temp || 0} />
-          <div className="text-xl font-bold text-white mt-2">
-            {data?.temp ? `${data.temp.toFixed(2)}°C` : 'N/A'} {/* 2 decimales para temperatura */}
+        {/* Temperatura */}
+        <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px]">
+          <h2 className="text-sm font-semibold text-white mb-1">Temperatura</h2>
+          <div className="flex items-center space-x-4">
+            <div style={{ width: '60px', height: '120px' }}>
+              <TemperatureGauge temperature={data?.temp || 0} />
+            </div>
+            <div className="text-xl font-bold text-white">
+              {data?.temp ? `${data.temp.toFixed(2)}°C` : 'N/A'}
+            </div>
           </div>
-          <div className="flex items-center justify-between w-full mt-2">
-            <div className="text-xs text-gray-400">Valor actual</div>
+          <div className="text-center mt-1">
             <button
               onClick={() => setShowHistory(showHistory === 'temp' ? null : 'temp')}
               className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
@@ -371,16 +378,13 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
           </div>
         </div>
 
-        <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-center min-h-[200px]">
-          <h2 className="text-sm font-semibold text-white mb-1">Humedad</h2>
-          <div className="flex items-center space-x-2">
+        {/* Humedad */}
+        <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px] relative">
+          <h2 className="text-sm font-semibold text-white mb-2">Humedad</h2>
+          <div className="relative">
             <HumidityGauge humidity={data?.humidity || 0} />
-            <div className="text-lg font-bold text-white">
-              {data?.humidity ? `${data.humidity.toFixed(1)}%` : 'N/A'}
-            </div>
           </div>
-          <div className="text-xs text-gray-400 mt-2">Hum_DHT22</div>
-          <div className="text-right mt-1">
+          <div className="text-center mt-1">
             <button
               onClick={() => setShowHistory(showHistory === 'humidity' ? null : 'humidity')}
               className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
@@ -390,15 +394,13 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
           </div>
         </div>
 
-        <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-center min-h-[200px]">
-          <h2 className="text-sm font-semibold text-white mb-1">Calidad del Aire</h2>
-          <div className="flex items-center space-x-2">
+        {/* Calidad del Aire */}
+        <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px] relative">
+          <h2 className="text-sm font-semibold text-white mb-2">Calidad del Aire</h2>
+          <div className="relative">
             <AirQualityGauge airQuality={airQuality} />
-            <div className="text-lg font-bold text-white">
-              {airQuality ? `${airQuality}%` : 'N/A'}
-            </div>
           </div>
-          <div className="text-right mt-1">
+          <div className="text-center mt-1">
             <button
               onClick={() => setShowHistory(showHistory === 'airQuality' ? null : 'airQuality')}
               className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
@@ -411,7 +413,7 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
         <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-center min-h-[200px]">
           <h2 className="text-sm font-semibold text-white mb-1">Estado de la Luz</h2>
           <div className="flex items-center space-x-2">
-            <LightIndicator isOn={data?.light || false} />
+            <LightIndicator isOn={data?.light ?? false} />
             <div className="text-lg font-bold text-white">
               {data?.light ? 'Encendido' : 'Apagado'}
             </div>
@@ -430,6 +432,7 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
       <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md">
         <h2 className="text-lg font-semibold text-white mb-4">Datos en Tiempo Real</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          
           <div className="bg-gray-700 p-4 rounded-lg shadow-md flex flex-col items-center">
             <h3 className="text-sm font-medium text-blue-400 mb-2">CO</h3>
             <div className="text-xl font-bold text-white">

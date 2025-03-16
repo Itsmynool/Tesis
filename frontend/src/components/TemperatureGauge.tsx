@@ -18,7 +18,7 @@ const TemperatureGauge: React.FC<TemperatureGaugeProps> = ({ temperature }) => {
 
   return (
     <div className="relative w-16 h-36 flex-shrink-0">
-      <svg width="40" height="120" className="flex-shrink-0">
+      <svg width="50" height="120" className="flex-shrink-0">
         <defs>
           <linearGradient id="tempGradient" x1="0%" y1="100%" x2="0%" y2="0%">
             <stop offset="0%" style={{ stopColor: '#3b82f6', stopOpacity: 1 }} />
@@ -29,20 +29,20 @@ const TemperatureGauge: React.FC<TemperatureGaugeProps> = ({ temperature }) => {
           </linearGradient>
         </defs>
 
-        {/* Barra del termómetro */}
+        {/* Barra del termómetro (aumentada a width="15") */}
         <rect
-          x="15"
+          x="12.5" /* Ajustado para centrar el rectángulo más ancho */
           y="10"
-          width="10"
+          width="15" /* Grosor aumentado */
           height="100"
           rx="5"
           fill="url(#tempGradient)"
           className="shadow-md"
         />
 
-        {/* Indicador (Triángulo) */}
+        {/* Indicador (Triángulo) ajustado para el nuevo grosor */}
         <polygon
-          points="10,0 20,0 15,10"
+          points="7.5,0 22.5,0 15,10" /* Ajustado para un ancho mayor */
           fill="white"
           className="transition-all duration-1000 ease-in-out"
           style={{
@@ -50,12 +50,12 @@ const TemperatureGauge: React.FC<TemperatureGaugeProps> = ({ temperature }) => {
           }}
         />
 
-        {/* Etiquetas de la escala de temperatura */}
-        <text x="30" y="10" fill="white" fontSize="8" textAnchor="start">30</text>
-        <text x="30" y="35" fill="white" fontSize="8" textAnchor="start">20</text>
-        <text x="30" y="60" fill="white" fontSize="8" textAnchor="start">10</text>
-        <text x="30" y="85" fill="white" fontSize="8" textAnchor="start">0</text>
-        <text x="30" y="110" fill="white" fontSize="8" textAnchor="start">-10</text>
+        {/* Etiquetas de la escala de temperatura (ajustadas para no solaparse) */}
+        <text x="35" y="10" fill="white" fontSize="8" textAnchor="start">30</text>
+        <text x="35" y="35" fill="white" fontSize="8" textAnchor="start">20</text>
+        <text x="35" y="60" fill="white" fontSize="8" textAnchor="start">10</text>
+        <text x="35" y="85" fill="white" fontSize="8" textAnchor="start">0</text>
+        <text x="35" y="110" fill="white" fontSize="8" textAnchor="start">-10</text>
       </svg>
     </div>
   );
