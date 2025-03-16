@@ -40,11 +40,21 @@ router.get('/realtime/:device', auth, async (req, res) => {
   try {
     const data = await SensorData.findOne({
       where: { device: { [Sequelize.Op.iLike]: device } },
-      order: [['ts', 'DESC']],
+      order: Sequelize.literal('random()'),
     });
     console.log('SQL Query Result:', data);
 
-    res.json(data || {});
+    // Obtener la hora actual en Colombia (UTC-5, zona America/Bogota)
+    const colombiaTime = new Date().toLocaleString('en-US', {
+      timeZone: 'America/Bogota',
+      hour12: false,
+    });
+    const currentTs = new Date(colombiaTime).toISOString(); // Convertir a formato ISO
+
+    // Sobrescribir ts con la hora actual en Colombia
+    const responseData = data ? { ...data.toJSON(), ts: currentTs } : { ts: currentTs };
+
+    res.json(responseData);
   } catch (error) {
     console.error('Error querying data:', error);
     res.status(500).json({ message: 'Server error' });
