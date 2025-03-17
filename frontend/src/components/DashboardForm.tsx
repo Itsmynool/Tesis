@@ -7,6 +7,7 @@ import AirQualityGauge from './AirQualityGauge';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import LightIndicator from './LightIndicator';
+import COGauge from './COGauge';
 
 // Estilo personalizado para el DatePicker
 const datePickerStyles = `
@@ -410,15 +411,16 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
           </div>
         </div>
 
-        <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-center min-h-[200px]">
-          <h2 className="text-sm font-semibold text-white mb-1">Estado de la Luz</h2>
-          <div className="flex items-center space-x-2">
+        {/* Estado de la Luz */}
+        <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px] relative">
+          <h2 className="text-sm font-semibold text-white mb-2 text-center">Estado de la Luz</h2>
+          <div className="flex flex-col items-center justify-center">
             <LightIndicator isOn={data?.light ?? false} />
-            <div className="text-lg font-bold text-white">
+            <div className="text-lg font-bold text-white mt-2">
               {data?.light ? 'Encendido' : 'Apagado'}
             </div>
           </div>
-          <div className="text-right mt-1">
+          <div className="text-center mt-1">
             <button
               onClick={() => setShowHistory(showHistory === 'light' ? null : 'light')}
               className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
@@ -427,24 +429,26 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
             </button>
           </div>
         </div>
+
+        {/* CO */}
+        <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px]">
+          <h2 className="text-sm font-semibold text-white mb-2">CO</h2>
+          <COGauge co={data?.co} /> {/* maxValue por defecto es 0.01 */}
+          <div className="text-center mt-1">
+            <button
+              onClick={() => setShowHistory(showHistory === 'co' ? null : 'co')}
+              className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
+            >
+              {showHistory === 'co' ? 'Ocultar Historial' : 'Ver Historial'}
+            </button>
+          </div>
+        </div>
+
       </div>
 
       <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md">
         <h2 className="text-lg font-semibold text-white mb-4">Datos en Tiempo Real</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          
-          <div className="bg-gray-700 p-4 rounded-lg shadow-md flex flex-col items-center">
-            <h3 className="text-sm font-medium text-blue-400 mb-2">CO</h3>
-            <div className="text-xl font-bold text-white">
-              {data?.co !== undefined && data.co !== null ? data.co.toFixed(6) : 'N/A'} {/* 6 decimales para CO */}
-            </div>
-            <button
-              onClick={() => setShowHistory(showHistory === 'co' ? null : 'co')}
-              className="mt-2 text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
-            >
-              {showHistory === 'co' ? 'Ocultar Historial' : 'Ver Historial'}
-            </button>
-          </div>
 
           <div className="bg-gray-700 p-4 rounded-lg shadow-md flex flex-col items-center">
             <h3 className="text-sm font-medium text-yellow-400 mb-2">LPG</h3>
