@@ -1,47 +1,79 @@
-.light {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: #666;
+  text-align: center;
+  margin: 0;
+}
+
+.light-indicator-wrapper {
+  width: 100%;
+  height: 100%;
   position: relative;
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
 }
 
-.light.on {
-  background-color: #ffd700; /* Color dorado para encendido */
-  box-shadow: 0 0 10px #ffd700, 0 0 20px #ffd700;
+.bombilla {
+  width: 80px; /* Tamaño ajustado para encajar en el card */
+  height: 160px; /* Proporcional al viewBox */
+  position: relative;
 }
 
-.light.off {
-  background-color: #555; /* Color gris para apagado */
-  box-shadow: none;
-}
-
-.glow {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.5);
+.halo {
+  fill: lightyellow;
+  transform: scale(0.2);
+  transform-origin: 50%;
   opacity: 0;
+  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
 }
 
-.light.on .glow {
-  opacity: 1;
-  animation: glow 1.5s infinite;
+.cristal {
+  fill: rgba(0, 0, 0, 0.1);
 }
 
-@keyframes glow {
+.casquillo {
+  fill: #333;
+}
+
+.filamento {
+  fill: #777;
+  transition: fill 0.3s ease-in-out;
+}
+
+.filam-animation {
+  animation: filam 5s forwards;
+}
+
+.hal-animation {
+  animation: hal 3s 3s forwards;
+}
+
+@keyframes filam {
   0% {
-    transform: scale(1);
-    opacity: 1;
+    fill: orange;
   }
-  50% {
-    transform: scale(1.2);
-    opacity: 0.5;
+  5% {
+    fill: #777;
+  }
+  10% {
+    fill: orange;
+  }
+  15% {
+    fill: #777;
   }
   100% {
-    transform: scale(1);
+    fill: orange;
+  }
+}
+
+@keyframes hal {
+  100% {
     opacity: 1;
+    transform: scale(0.9) translateY(-20px);
   }
 }

@@ -8,6 +8,8 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import LightIndicator from './LightIndicator';
 import COGauge from './COGauge';
+import LPGGauge from './LPGGauge';
+import SmokeIndicator from './SmokeIndicator';
 
 // Estilo personalizado para el DatePicker
 const datePickerStyles = `
@@ -444,49 +446,64 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
           </div>
         </div>
 
-      </div>
-
-      <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md">
-        <h2 className="text-lg font-semibold text-white mb-4">Datos en Tiempo Real</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-
-          <div className="bg-gray-700 p-4 rounded-lg shadow-md flex flex-col items-center">
-            <h3 className="text-sm font-medium text-yellow-400 mb-2">LPG</h3>
-            <div className="text-xl font-bold text-white">
-              {data?.lpg !== undefined && data.lpg !== null ? data.lpg.toFixed(6) : 'N/A'} {/* 6 decimales para LPG */}
-            </div>
+        {/* LPG */}
+        <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px]">
+          <h2 className="text-sm font-semibold text-white mb-2">LPG (Gas liquado de petroleo)</h2>
+          <LPGGauge lpg={data?.lpg} /> {/* maxValue por defecto es 0.01 */}
+          <div className="text-center mt-1">
             <button
               onClick={() => setShowHistory(showHistory === 'lpg' ? null : 'lpg')}
-              className="mt-2 text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
+              className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
             >
               {showHistory === 'lpg' ? 'Ocultar Historial' : 'Ver Historial'}
             </button>
           </div>
+        </div>
 
-          <div className="bg-gray-700 p-4 rounded-lg shadow-md flex flex-col items-center">
-            <h3 className="text-sm font-medium text-orange-400 mb-2">Movimiento</h3>
-            <div className="text-xl font-bold text-white">{data?.motion ? 'Sí' : 'No'}</div>
+        {/* Movimiento */}
+        <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px]">
+          <h3 className="text-sm font-semibold text-white mb-2">Movimiento</h3>
+          <div className="flex flex-col items-center justify-center">
+            {/* Imagen dinámica según estado de `motion` */}
+            <img
+              src={data?.motion ? "/assets/para-caminar.png" : "/assets/hombre.png"}
+              alt="Estado de movimiento"
+              className="w-8 h-8" // Reducido de w-16 h-16 a w-12 h-12 (48x48px)
+            />
+            <div className="text-xl font-bold text-white mt-2">{data?.motion ? "Sí" : "No"}</div>
+          </div>
+          <div className="text-center mt-1">
             <button
-              onClick={() => setShowHistory(showHistory === 'motion' ? null : 'motion')}
-              className="mt-2 text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
+              onClick={() => setShowHistory(showHistory === "motion" ? null : "motion")}
+              className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
             >
-              {showHistory === 'motion' ? 'Ocultar Historial' : 'Ver Historial'}
+              {showHistory === "motion" ? "Ocultar Historial" : "Ver Historial"}
             </button>
           </div>
+        </div>
 
-          <div className="bg-gray-700 p-4 rounded-lg shadow-md flex flex-col items-center">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Humo</h3>
-            <div className="text-xl font-bold text-white">
-              {data?.smoke !== undefined && data.smoke !== null ? data.smoke.toFixed(6) : 'N/A'} {/* 6 decimales para humo */}
+        {/* Humo */}
+        <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px]">
+          <h3 className="text-sm font-semibold text-white mb-2">Humo</h3>
+          <div className="flex flex-col items-center justify-center">
+            {/* Indicador de humo como elemento visual */}
+            <div className="w-16 h-16">
+              <SmokeIndicator smokeValue={data?.smoke} />
+            </div>
+          </div>
+          <div className="text-center mt-1">
+          <div className="text-xl font-bold text-white mt-2">
+              {data?.smoke !== undefined && data?.smoke !== null ? data.smoke.toFixed(6) : 'N/A'} PPM
             </div>
             <button
               onClick={() => setShowHistory(showHistory === 'smoke' ? null : 'smoke')}
-              className="mt-2 text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
+              className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
             >
               {showHistory === 'smoke' ? 'Ocultar Historial' : 'Ver Historial'}
             </button>
           </div>
         </div>
+
       </div>
 
       {/* Sección de Historial */}
