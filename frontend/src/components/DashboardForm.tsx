@@ -87,6 +87,21 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
   const [filteredData, setFilteredData] = useState<SensorData[]>([]);
   const [isHistoryExpanded, setIsHistoryExpanded] = useState<boolean>(false);
 
+  // Estado para controlar la visibilidad de las tarjetas
+  const [cardVisibility, setCardVisibility] = useState({
+    temperature: true,
+    humidity: true,
+    airQuality: true,
+    light: true,
+    co: true,
+    lpg: true,
+    motion: true,
+    smoke: true,
+  });
+
+  // Estado para controlar la apertura del dropdown de "Mostrar Datos"
+  const [isDataDropdownOpen, setIsDataDropdownOpen] = useState<boolean>(false);
+
   // Usar el ts recibido sin modificaciones
   useEffect(() => {
     const updatedData = history.map((item: SensorData) => {
@@ -297,6 +312,14 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
     };
   };
 
+  // Función para manejar el cambio de visibilidad de las tarjetas
+  const handleCardVisibilityChange = (card: keyof typeof cardVisibility) => {
+    setCardVisibility((prev) => ({
+      ...prev,
+      [card]: !prev[card],
+    }));
+  };
+
   const axisRange = showHistory ? getDynamicAxisRange(showHistory) : { min: 0, max: 100, stepSize: 10 };
 
   return (
@@ -304,206 +327,235 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
       <style>{datePickerStyles}</style>
 
       <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md">
-        <h2 className="text-xl font-semibold text-white mb-2">Seleccionar Dispositivo</h2>
-        <div className="flex items-center space-x-4">
-          <select
-            value={selectedDevice || ''}
-            onChange={(e) => changeDevice(e.target.value)}
-            className="w-full max-w-xs p-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="" disabled>
-              Selecciona un dispositivo
-            </option>
-            {availableDevices.map((dev) => (
-              <option key={dev} value={dev}>
-                {dev}
+        <div className="flex items-start space-x-12">
+          {/* Selector de Dispositivos */}
+          <div className="flex-1 flex flex-col">
+            <h2 className="text-lg font-semibold text-white mb-2">Cambiar Ubicación</h2>
+            <select
+              value={selectedDevice || ''}
+              onChange={(e) => changeDevice(e.target.value)}
+              className="w-full max-w-xs p-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="" disabled>
+                Selecciona un dispositivo
               </option>
-            ))}
-          </select>
+              {availableDevices.map((dev) => (
+                <option key={dev} value={dev}>
+                  {dev}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Dropdown de Mostrar Datos */}
+          <div className="flex-1 relative flex flex-col">
+            <h3 className="text-lg font-semibold text-white mb-2">Mostrar Datos:</h3>
+            <button
+              onClick={() => setIsDataDropdownOpen(!isDataDropdownOpen)}
+              className="w-full max-w-xs p-2 bg-gray-700 text-white border border-gray-600 rounded-lg text-left flex justify-between items-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <span>Selecciona los datos a mostrar</span>
+              <svg
+                className={`w-4 h-4 transform ${isDataDropdownOpen ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            {isDataDropdownOpen && (
+              <div className="absolute z-10 mt-1 w-full max-w-xs bg-gray-700 border border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                {Object.keys(cardVisibility).map((card) => (
+                  <label
+                    key={card}
+                    className="flex items-center space-x-1 px-3 py-1 text-white text-sm hover:bg-gray-600 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={cardVisibility[card as keyof typeof cardVisibility]}
+                      onChange={() => handleCardVisibilityChange(card as keyof typeof cardVisibility)}
+                      className="h-3 w-3 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    />
+                    <span>
+                      {card === 'temperature' && 'Temperatura'}
+                      {card === 'humidity' && 'Humedad'}
+                      {card === 'airQuality' && 'Calidad del Aire'}
+                      {card === 'light' && 'Estado de la Luz'}
+                      {card === 'co' && 'CO'}
+                      {card === 'lpg' && 'LPG'}
+                      {card === 'motion' && 'Movimiento'}
+                      {card === 'smoke' && 'Humo'}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-
-        {/*
-        <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md col-span-1 md:col-span-2 lg:col-span-4">
-          <h2 className="text-lg font-semibold text-white mb-2">Resumen de Sensores</h2>
-          <div className="h-48">
-            <Bar
-              data={updateSummaryBarChartData()}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: { display: false },
-                  title: { display: false },
-                },
-                scales: {
-                  x: {
-                    ticks: { color: 'white' },
-                    grid: { display: false },
-                  },
-                  y: {
-                    ticks: { color: 'white' },
-                    grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                    beginAtZero: true,
-                  },
-                },
-              }}
-            />
-          </div>
-          <div className="text-right mt-2">
-            <button className="text-indigo-400 text-sm hover:text-indigo-300 transition duration-300">
-              Ver Detalles
-            </button>
-          </div>
-        </div>
-        */}
-
         {/* Temperatura */}
-        <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px]">
-          <h2 className="text-sm font-semibold text-white mb-1">Temperatura</h2>
-          <div className="flex items-center space-x-4">
-            <div style={{ width: '60px', height: '120px' }}>
-              <TemperatureGauge temperature={data?.temp || 0} />
+        {cardVisibility.temperature && (
+          <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px]">
+            <h2 className="text-sm font-semibold text-white mb-1">Temperatura</h2>
+            <div className="flex items-center space-x-4">
+              <div style={{ width: '60px', height: '120px' }}>
+                <TemperatureGauge temperature={data?.temp || 0} />
+              </div>
+              <div className="text-xl font-bold text-white">
+                {data?.temp ? `${data.temp.toFixed(2)}°C` : 'N/A'}
+              </div>
             </div>
-            <div className="text-xl font-bold text-white">
-              {data?.temp ? `${data.temp.toFixed(2)}°C` : 'N/A'}
+            <div className="text-center mt-1">
+              <button
+                onClick={() => setShowHistory(showHistory === 'temp' ? null : 'temp')}
+                className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
+              >
+                {showHistory === 'temp' ? 'Ocultar Historial' : 'Ver Historial'}
+              </button>
             </div>
           </div>
-          <div className="text-center mt-1">
-            <button
-              onClick={() => setShowHistory(showHistory === 'temp' ? null : 'temp')}
-              className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
-            >
-              {showHistory === 'temp' ? 'Ocultar Historial' : 'Ver Historial'}
-            </button>
-          </div>
-        </div>
+        )}
 
         {/* Humedad */}
-        <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px] relative">
-          <h2 className="text-sm font-semibold text-white mb-2">Humedad</h2>
-          <div className="relative">
-            <HumidityGauge humidity={data?.humidity || 0} />
+        {cardVisibility.humidity && (
+          <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px] relative">
+            <h2 className="text-sm font-semibold text-white mb-2">Humedad</h2>
+            <div className="relative">
+              <HumidityGauge humidity={data?.humidity || 0} />
+            </div>
+            <div className="text-center mt-1">
+              <button
+                onClick={() => setShowHistory(showHistory === 'humidity' ? null : 'humidity')}
+                className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
+              >
+                {showHistory === 'humidity' ? 'Ocultar Historial' : 'Ver Historial'}
+              </button>
+            </div>
           </div>
-          <div className="text-center mt-1">
-            <button
-              onClick={() => setShowHistory(showHistory === 'humidity' ? null : 'humidity')}
-              className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
-            >
-              {showHistory === 'humidity' ? 'Ocultar Historial' : 'Ver Historial'}
-            </button>
-          </div>
-        </div>
+        )}
 
         {/* Calidad del Aire */}
-        <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px] relative">
-          <h2 className="text-sm font-semibold text-white mb-2">Calidad del Aire</h2>
-          <div className="relative">
-            <AirQualityGauge airQuality={airQuality} />
+        {cardVisibility.airQuality && (
+          <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px] relative">
+            <h2 className="text-sm font-semibold text-white mb-2">Calidad del Aire</h2>
+            <div className="relative">
+              <AirQualityGauge airQuality={airQuality} />
+            </div>
+            <div className="text-center mt-1">
+              <button
+                onClick={() => setShowHistory(showHistory === 'airQuality' ? null : 'airQuality')}
+                className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
+              >
+                {showHistory === 'airQuality' ? 'Ocultar Historial' : 'Ver Historial'}
+              </button>
+            </div>
           </div>
-          <div className="text-center mt-1">
-            <button
-              onClick={() => setShowHistory(showHistory === 'airQuality' ? null : 'airQuality')}
-              className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
-            >
-              {showHistory === 'airQuality' ? 'Ocultar Historial' : 'Ver Historial'}
-            </button>
-          </div>
-        </div>
+        )}
 
         {/* Estado de la Luz */}
-        <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px] relative">
-          <h2 className="text-sm font-semibold text-white mb-2 text-center">Estado de la Luz</h2>
-          <div className="flex flex-col items-center justify-center">
-            <LightIndicator isOn={data?.light ?? false} />
-            <div className="text-lg font-bold text-white mt-2">
-              {data?.light ? 'Encendido' : 'Apagado'}
+        {cardVisibility.light && (
+          <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px] relative">
+            <h2 className="text-sm font-semibold text-white mb-2 text-center">Estado de la Luz</h2>
+            <div className="flex flex-col items-center justify-center">
+              <LightIndicator isOn={data?.light ?? false} />
+              <div className="text-lg font-bold text-white mt-2">
+                {data?.light ? 'Encendido' : 'Apagado'}
+              </div>
+            </div>
+            <div className="text-center mt-1">
+              <button
+                onClick={() => setShowHistory(showHistory === 'light' ? null : 'light')}
+                className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
+              >
+                {showHistory === 'light' ? 'Ocultar Historial' : 'Ver Historial'}
+              </button>
             </div>
           </div>
-          <div className="text-center mt-1">
-            <button
-              onClick={() => setShowHistory(showHistory === 'light' ? null : 'light')}
-              className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
-            >
-              {showHistory === 'light' ? 'Ocultar Historial' : 'Ver Historial'}
-            </button>
-          </div>
-        </div>
+        )}
 
         {/* CO */}
-        <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px]">
-          <h2 className="text-sm font-semibold text-white mb-2">CO</h2>
-          <COGauge co={data?.co} /> {/* maxValue por defecto es 0.01 */}
-          <div className="text-center mt-1">
-            <button
-              onClick={() => setShowHistory(showHistory === 'co' ? null : 'co')}
-              className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
-            >
-              {showHistory === 'co' ? 'Ocultar Historial' : 'Ver Historial'}
-            </button>
+        {cardVisibility.co && (
+          <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px]">
+            <h2 className="text-sm font-semibold text-white mb-2">CO</h2>
+            <COGauge co={data?.co} /> {/* maxValue por defecto es 0.01 */}
+            <div className="text-center mt-1">
+              <button
+                onClick={() => setShowHistory(showHistory === 'co' ? null : 'co')}
+                className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
+              >
+                {showHistory === 'co' ? 'Ocultar Historial' : 'Ver Historial'}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* LPG */}
-        <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px]">
-          <h2 className="text-sm font-semibold text-white mb-2">LPG (Gas liquado de petroleo)</h2>
-          <LPGGauge lpg={data?.lpg} /> {/* maxValue por defecto es 0.01 */}
-          <div className="text-center mt-1">
-            <button
-              onClick={() => setShowHistory(showHistory === 'lpg' ? null : 'lpg')}
-              className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
-            >
-              {showHistory === 'lpg' ? 'Ocultar Historial' : 'Ver Historial'}
-            </button>
+        {cardVisibility.lpg && (
+          <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px]">
+            <h2 className="text-sm font-semibold text-white mb-2">LPG (Gas liquado de petroleo)</h2>
+            <LPGGauge lpg={data?.lpg} /> {/* maxValue por defecto es 0.01 */}
+            <div className="text-center mt-1">
+              <button
+                onClick={() => setShowHistory(showHistory === 'lpg' ? null : 'lpg')}
+                className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
+              >
+                {showHistory === 'lpg' ? 'Ocultar Historial' : 'Ver Historial'}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Movimiento */}
-        <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px]">
-          <h3 className="text-sm font-semibold text-white mb-2">Movimiento</h3>
-          <div className="flex flex-col items-center justify-center">
-            {/* Imagen dinámica según estado de `motion` */}
-            <img
-              src={data?.motion ? "/assets/para-caminar.png" : "/assets/hombre.png"}
-              alt="Estado de movimiento"
-              className="w-8 h-8" // Reducido de w-16 h-16 a w-12 h-12 (48x48px)
-            />
-            <div className="text-xl font-bold text-white mt-2">{data?.motion ? "Sí" : "No"}</div>
+        {cardVisibility.motion && (
+          <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px]">
+            <h3 className="text-sm font-semibold text-white mb-2">Movimiento</h3>
+            <div className="flex flex-col items-center justify-center">
+              {/* Imagen dinámica según estado de `motion` */}
+              <img
+                src={data?.motion ? "/assets/para-caminar.png" : "/assets/hombre.png"}
+                alt="Estado de movimiento"
+                className="w-8 h-8" // Reducido de w-16 h-16 a w-12 h-12 (48x48px)
+              />
+              <div className="text-xl font-bold text-white mt-2">{data?.motion ? "Sí" : "No"}</div>
+            </div>
+            <div className="text-center mt-1">
+              <button
+                onClick={() => setShowHistory(showHistory === "motion" ? null : "motion")}
+                className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
+              >
+                {showHistory === "motion" ? "Ocultar Historial" : "Ver Historial"}
+              </button>
+            </div>
           </div>
-          <div className="text-center mt-1">
-            <button
-              onClick={() => setShowHistory(showHistory === "motion" ? null : "motion")}
-              className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
-            >
-              {showHistory === "motion" ? "Ocultar Historial" : "Ver Historial"}
-            </button>
-          </div>
-        </div>
+        )}
 
         {/* Humo */}
-        <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px]">
-          <h3 className="text-sm font-semibold text-white mb-2">Humo</h3>
-          <div className="flex flex-col items-center justify-center">
-            {/* Indicador de humo como elemento visual */}
-            <div className="w-16 h-16">
-              <SmokeIndicator smokeValue={data?.smoke} />
+        {cardVisibility.smoke && (
+          <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px]">
+            <h3 className="text-sm font-semibold text-white mb-2">Humo</h3>
+            <div className="flex flex-col items-center justify-center">
+              {/* Indicador de humo como elemento visual */}
+              <div className="w-16 h-16">
+                <SmokeIndicator smokeValue={data?.smoke} />
+              </div>
+            </div>
+            <div className="text-center mt-1">
+              <div className="text-xl font-bold text-white mt-2">
+                {data?.smoke !== undefined && data?.smoke !== null ? data.smoke.toFixed(6) : 'N/A'} PPM
+              </div>
+              <button
+                onClick={() => setShowHistory(showHistory === 'smoke' ? null : 'smoke')}
+                className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
+              >
+                {showHistory === 'smoke' ? 'Ocultar Historial' : 'Ver Historial'}
+              </button>
             </div>
           </div>
-          <div className="text-center mt-1">
-          <div className="text-xl font-bold text-white mt-2">
-              {data?.smoke !== undefined && data?.smoke !== null ? data.smoke.toFixed(6) : 'N/A'} PPM
-            </div>
-            <button
-              onClick={() => setShowHistory(showHistory === 'smoke' ? null : 'smoke')}
-              className="text-indigo-400 text-xs hover:text-indigo-300 transition duration-300"
-            >
-              {showHistory === 'smoke' ? 'Ocultar Historial' : 'Ver Historial'}
-            </button>
-          </div>
-        </div>
-
+        )}
       </div>
 
       {/* Sección de Historial */}

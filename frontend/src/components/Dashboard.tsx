@@ -45,6 +45,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
   const [startTime, setStartTime] = useState<Date>(new Date());
   const [timeRemaining, setTimeRemaining] = useState<number>(30000); // Inicializamos con 30 segundos
   const [showUpdateNotification, setShowUpdateNotification] = useState<boolean>(false);
+  const [isFirstLoad, setIsFirstLoad] = useState<boolean>(true); // Nueva variable para rastrear la primera carga
   const navigate = useNavigate();
 
   const UPDATE_INTERVAL = 30000; // 30 segundos en milisegundos
@@ -138,8 +139,11 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
         });
         const newData = response.data;
         setData(newData);
-        setShowUpdateNotification(true);
-        setTimeout(() => setShowUpdateNotification(false), 5000);
+        // Solo mostramos la notificación si no es la primera carga
+        if (!isFirstLoad) {
+          setShowUpdateNotification(true);
+          setTimeout(() => setShowUpdateNotification(false), 5000);
+        }
         setStartTime(new Date());
 
         // Agregar el nuevo dato al historial local
@@ -151,6 +155,9 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
           }
           return updatedHistory;
         });
+
+        // Marcamos que la primera carga ya ocurrió
+        setIsFirstLoad(false);
       } catch (err: any) {
         if (err.response?.status === 401) {
           setError('Sesión expirada. Por favor, inicia sesión nuevamente.');
@@ -323,20 +330,13 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
 
   return (
     <div className="min-h-screen bg-gray-900 p-6 relative">
-      {showUpdateNotification && (
-        <div className="fixed top-4 right-4 z-50 animate-fade-in-out">
-          <div className="bg-green-600 text-white px-4 py-2 rounded-md shadow-lg">
-            Datos actualizados correctamente
-          </div>
-        </div>
-      )}
-
-      <div className="w-full">
-        <div className="flex justify-between items-center mb-8">
+      {/* Header fijo */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gray-900 px-6 py-3">
+        <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold text-white">Tablero de Control</h1>
-          <div className="flex flex-col items-end space-y-1">
+          <div className="flex flex-col items-end">
             <div className="text-sm text-gray-400">Última actualización: {getTimeSinceLastUpdate()}</div>
-            <div className="text-sm text-gray-400">Tiempo restante: {getTimeRemaining()}</div>
+            {/* Eliminamos el texto de "Tiempo restante" */}
           </div>
           <button
             onClick={handleLogout}
@@ -345,12 +345,15 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
             Cerrar Sesión
           </button>
         </div>
+      </div>
 
+      {/* Contenedor principal con padding superior para evitar que el contenido quede debajo del header */}
+      <div className="pt-16 w-full">
         {error && (
           <div className="text-lg font-semibold text-red-500 mb-4">{error}</div>
         )}
 
-        {/* Mapa interactivo para seleccionar dispositivos */}
+        {/* Mapa interactivo para seleccionar dispositivos (dejado comentado como en el original) */}
         {/*
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-white mb-4">Selecciona un dispositivo en el mapa</h2>
