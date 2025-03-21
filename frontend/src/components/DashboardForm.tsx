@@ -324,10 +324,10 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
       <style>{datePickerStyles}</style>
 
       <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md">
-        <h2 className="text-xl font-semibold text-white mb-2">Cambiar Ubicación</h2>
         <div className="flex items-start space-x-8">
           {/* Selector de Dispositivos */}
-          <div className="flex-1">
+          <div className="flex-1 flex flex-col">
+            <h2 className="text-lg font-semibold text-white mb-2">Cambiar Ubicación</h2>
             <select
               value={selectedDevice || ''}
               onChange={(e) => changeDevice(e.target.value)}
