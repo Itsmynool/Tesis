@@ -84,6 +84,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
         if (err.response?.status === 401) {
           setError('Sesión expirada. Por favor, inicia sesión nuevamente.');
           setToken(null);
+          localStorage.removeItem('token'); // Limpiar el token del almacenamiento local
           navigate('/login');
         } else {
           setError('Error al obtener dispositivos disponibles: ' + (err.message || 'Desconocido'));
@@ -119,6 +120,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
       if (err.response?.status === 401) {
         setError('Sesión expirada. Por favor, inicia sesión nuevamente.');
         setToken(null);
+        localStorage.removeItem('token'); // Limpiar el token del almacenamiento local
         navigate('/login');
       } else {
         setError('Error al cambiar de dispositivo: ' + (err.message || 'Desconocido'));
@@ -162,6 +164,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
         if (err.response?.status === 401) {
           setError('Sesión expirada. Por favor, inicia sesión nuevamente.');
           setToken(null);
+          localStorage.removeItem('token'); // Limpiar el token del almacenamiento local
           navigate('/login');
         } else {
           setError('Error al obtener datos en tiempo real: ' + (err.message || 'Desconocido'));
@@ -323,81 +326,52 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
     return colors[dataKey] ? colors[dataKey].replace('rgb', 'rgba').replace(')', `, ${opacity})`) : 'gray';
   };
 
-  const handleLogout = () => {
-    setToken(null);
-    navigate('/login');
+  const handleLogout = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation(); // Detener la propagación del evento
+    e.preventDefault(); // Prevenir cualquier comportamiento por defecto
+    console.log('Clic en Cerrar Sesión detectado');
+    try {
+      console.log('Iniciando cierre de sesión...');
+      // Limpiar el token del estado
+      setToken(null);
+      // Limpiar el token del almacenamiento local (si se está usando)
+      localStorage.removeItem('token');
+      sessionStorage.removeItem('token'); // También limpiamos sessionStorage por si acaso
+      console.log('Token limpiado del estado y almacenamiento local');
+      // Redirigir al login
+      navigate('/login', { replace: true });
+      console.log('Redirigiendo a /login');
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-900 p-6 relative">
       {/* Header fijo */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-gray-900 px-6 py-3">
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gray-900 px-6 py-4 shadow-lg">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold text-white">Tablero de Control</h1>
-          <div className="flex flex-col items-end">
+          <div className="flex items-center space-x-4">
             <div className="text-sm text-gray-400">Última actualización: {getTimeSinceLastUpdate()}</div>
-            {/* Eliminamos el texto de "Tiempo restante" */}
+            <button
+              onClick={(e) => {
+                console.log('Evento onClick disparado en el botón Cerrar Sesión');
+                handleLogout(e);
+              }}
+              className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-300 z-50"
+            >
+              Cerrar Sesión
+            </button>
           </div>
-          <button
-            onClick={handleLogout}
-            className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-300"
-          >
-            Cerrar Sesión
-          </button>
         </div>
       </div>
 
       {/* Contenedor principal con padding superior para evitar que el contenido quede debajo del header */}
-      <div className="pt-16 w-full">
+      <div className="pt-20 w-full">
         {error && (
           <div className="text-lg font-semibold text-red-500 mb-4">{error}</div>
         )}
-
-        {/* Mapa interactivo para seleccionar dispositivos (dejado comentado como en el original) */}
-        {/*
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-white mb-4">Selecciona un dispositivo en el mapa</h2>
-          {deviceLocations.length > 0 ? (
-            <MapContainer
-              center={[4.7110, -74.0721]} // Centro inicial (Bogotá, como punto medio aproximado)
-              zoom={6} // Zoom para mostrar Colombia
-              style={{ height: '400px', width: '100%' }}
-              className="rounded-lg shadow-lg"
-            >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              />
-              {deviceLocations.map((location) => (
-                <Marker
-                  key={location.device}
-                  position={[location.lat, location.lng]}
-                  eventHandlers={{
-                    click: () => {
-                      changeDevice(location.device);
-                    },
-                  }}
-                >
-                  <Popup>
-                    <div>
-                      <h3 className="font-bold">{location.name}</h3>
-                      <p>Dispositivo: {location.device}</p>
-                      <button
-                        onClick={() => changeDevice(location.device)}
-                        className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
-                      >
-                        Seleccionar
-                      </button>
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
-            </MapContainer>
-          ) : (
-            <p className="text-gray-400">No hay ubicaciones disponibles para los dispositivos.</p>
-          )}
-        </div>
-        */}
 
         <DashboardForm
           availableDevices={availableDevices}

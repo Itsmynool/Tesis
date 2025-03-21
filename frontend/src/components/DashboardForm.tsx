@@ -99,9 +99,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
     smoke: true,
   });
 
-  // Estado para controlar la apertura del dropdown de "Mostrar Datos"
-  const [isDataDropdownOpen, setIsDataDropdownOpen] = useState<boolean>(false);
-
   // Usar el ts recibido sin modificaciones
   useEffect(() => {
     const updatedData = history.map((item: SensorData) => {
@@ -327,10 +324,10 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
       <style>{datePickerStyles}</style>
 
       <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md">
-        <div className="flex items-start space-x-12">
+        <h2 className="text-xl font-semibold text-white mb-2">Cambiar Ubicación</h2>
+        <div className="flex items-start space-x-8">
           {/* Selector de Dispositivos */}
-          <div className="flex-1 flex flex-col">
-            <h2 className="text-lg font-semibold text-white mb-2">Cambiar Ubicación</h2>
+          <div className="flex-1">
             <select
               value={selectedDevice || ''}
               onChange={(e) => changeDevice(e.target.value)}
@@ -347,51 +344,31 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
             </select>
           </div>
 
-          {/* Dropdown de Mostrar Datos */}
-          <div className="flex-1 relative flex flex-col">
+          {/* Lista de Checkboxes */}
+          <div className="flex-1">
             <h3 className="text-lg font-semibold text-white mb-2">Mostrar Datos:</h3>
-            <button
-              onClick={() => setIsDataDropdownOpen(!isDataDropdownOpen)}
-              className="w-full max-w-xs p-2 bg-gray-700 text-white border border-gray-600 rounded-lg text-left flex justify-between items-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <span>Selecciona los datos a mostrar</span>
-              <svg
-                className={`w-4 h-4 transform ${isDataDropdownOpen ? 'rotate-180' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-              </svg>
-            </button>
-            {isDataDropdownOpen && (
-              <div className="absolute z-10 mt-1 w-full max-w-xs bg-gray-700 border border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                {Object.keys(cardVisibility).map((card) => (
-                  <label
-                    key={card}
-                    className="flex items-center space-x-1 px-3 py-1 text-white text-sm hover:bg-gray-600 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={cardVisibility[card as keyof typeof cardVisibility]}
-                      onChange={() => handleCardVisibilityChange(card as keyof typeof cardVisibility)}
-                      className="h-3 w-3 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                    />
-                    <span>
-                      {card === 'temperature' && 'Temperatura'}
-                      {card === 'humidity' && 'Humedad'}
-                      {card === 'airQuality' && 'Calidad del Aire'}
-                      {card === 'light' && 'Estado de la Luz'}
-                      {card === 'co' && 'CO'}
-                      {card === 'lpg' && 'LPG'}
-                      {card === 'motion' && 'Movimiento'}
-                      {card === 'smoke' && 'Humo'}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            )}
+            <div className="grid grid-cols-2 gap-2">
+              {Object.keys(cardVisibility).map((card) => (
+                <label key={card} className="flex items-center space-x-2 text-white">
+                  <input
+                    type="checkbox"
+                    checked={cardVisibility[card as keyof typeof cardVisibility]}
+                    onChange={() => handleCardVisibilityChange(card as keyof typeof cardVisibility)}
+                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  />
+                  <span>
+                    {card === 'temperature' && 'Temperatura'}
+                    {card === 'humidity' && 'Humedad'}
+                    {card === 'airQuality' && 'Calidad del Aire'}
+                    {card === 'light' && 'Estado de la Luz'}
+                    {card === 'co' && 'CO'}
+                    {card === 'lpg' && 'LPG'}
+                    {card === 'motion' && 'Movimiento'}
+                    {card === 'smoke' && 'Humo'}
+                  </span>
+                </label>
+              ))}
+            </div>
           </div>
         </div>
       </div>
