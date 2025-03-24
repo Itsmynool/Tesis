@@ -1,11 +1,11 @@
 import express from 'express';
 import cors from 'cors';
-import connectMongoDB from './config/db.js';
-import { connectPostgreSQL, sequelize } from './config/pgdb.js';
-import authRoutes from './routes/auth.js';
-import dataRoutes from './routes/data.js';
+import connectMongoDB from './databases/mongoDatabase.js';
+import { connectPostgreSQL, sequelize } from './databases/postgresqlDatabase.js';
+import authRoutes from './routes/authRoutes.js';
+import dataRoutes from './routes/sensorRoutes.js';
 import dotenv from 'dotenv';
-import SensorData from './models/SensorData.js';
+import SensorData from './models/sensorData.js';
 
 dotenv.config();
 
@@ -22,9 +22,14 @@ SensorData.sync({ alter: false }); // Sincronizar sin alterar la tabla
 app.use(cors());
 app.use(express.json());
 
+// Endpoint for root route
+app.get('/', (req, res) => {
+    res.send('Hello, world!');
+});
+
 // Rutas
 app.use('/api/auth', authRoutes);
-app.use('/api/data', dataRoutes);
+app.use('/api/sensor', dataRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

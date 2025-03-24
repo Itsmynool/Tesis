@@ -89,7 +89,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
       try {
         setLoading(true);
         setError(null);
-        const response = await axios.get<string[]>('http://localhost:5000/api/data/devices', {
+        const response = await axios.get<string[]>('http://localhost:5000/api/sensor/devices', {
           headers: { 'x-auth-token': token },
         });
         const devices = response.data;
