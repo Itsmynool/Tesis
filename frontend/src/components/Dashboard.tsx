@@ -1,42 +1,21 @@
-import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement, BarElement } from 'chart.js';
 import { DashboardProps, SensorData } from '../types';
 import DashboardForm from './DashboardForm';
-import 'leaflet/dist/leaflet.css';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import L from 'leaflet';
-
-// Corrige el ícono predeterminado de Leaflet
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-});
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement, BarElement);
 
-// Definimos una interfaz para las ubicaciones de los dispositivos
-interface DeviceLocation {
-  device: string;
-  name: string;
-  lat: number;
-  lng: number;
-}
-
-// Mapeo manual de direcciones MAC a ubicaciones (Cali, Medellín, Bogotá)
-const deviceLocationsMap: { [key: string]: { name: string; lat: number; lng: number } } = {
-  '00:0f:00:70:91:0a': { name: 'Sensor Cali', lat: 3.4372, lng: -76.5225 }, // Cali
-  '1c:bfce:15:ec:4d': { name: 'Sensor Medellín', lat: 6.2442, lng: -75.5812 }, // Medellín
-  'b8:27:eb:bf:9d:51': { name: 'Sensor Bogotá', lat: 4.7110, lng: -74.0721 }, // Bogotá
-};
 
 const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
   const [availableDevices, setAvailableDevices] = useState<string[]>([]);
-  const [deviceLocations, setDeviceLocations] = useState<DeviceLocation[]>([]);
-  const [selectedDevice, setSelectedDevice] = useState<string>(devices[0] || '');
+  const [selectedDevice, setSelectedDevice] = useState<string>(() => {
+    return localStorage.getItem('selectedDevice') || devices[0] || '';
+  });
+  const [deviceHistories, setDeviceHistories] = useState<Record<string, SensorData[]>>(() => {
+    return JSON.parse(localStorage.getItem('deviceHistories') || '{}');
+  });
   const [data, setData] = useState<SensorData | null>(null);
   const [localHistory, setLocalHistory] = useState<SensorData[]>([]); // Historial local
   const [loading, setLoading] = useState<boolean>(false);
@@ -48,138 +27,123 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
   const [isFirstLoad, setIsFirstLoad] = useState<boolean>(true); // Nueva variable para rastrear la primera carga
   const navigate = useNavigate();
 
-  const UPDATE_INTERVAL = 30000; // 30 segundos en milisegundos
+  const UPDATE_INTERVAL = 10000; // 30 segundos en milisegundos
   const MAX_HISTORY_ENTRIES = 100; // Límite de entradas en el historial local
 
-  // Obtener dispositivos y mapearlos a ubicaciones
-  useEffect(() => {
-    const fetchAvailableDevices = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await axios.get<string[]>('http://localhost:5000/api/data/devices', {
-          headers: { 'x-auth-token': token },
-        });
-        const devices = response.data;
-        setAvailableDevices(devices);
-
-        // Mapear los dispositivos a ubicaciones usando el mapeo manual
-        const locations = devices
-          .filter((device) => deviceLocationsMap[device]) // Solo incluir dispositivos con ubicación definida
-          .map((device) => ({
-            device,
-            name: deviceLocationsMap[device].name,
-            lat: deviceLocationsMap[device].lat,
-            lng: deviceLocationsMap[device].lng,
-          }));
-        setDeviceLocations(locations);
-
-        if (!selectedDevice || !devices.includes(selectedDevice)) {
-          const deviceWithData = devices.find((dev) => dev === 'b8:27:eb:bf:9d:51') || devices[0];
-          if (deviceWithData) {
-            setSelectedDevice(deviceWithData);
-          }
-        }
-      } catch (err: any) {
-        if (err.response?.status === 401) {
-          setError('Sesión expirada. Por favor, inicia sesión nuevamente.');
-          setToken(null);
-          localStorage.removeItem('token'); // Limpiar el token del almacenamiento local
-          navigate('/login');
-        } else {
-          setError('Error al obtener dispositivos disponibles: ' + (err.message || 'Desconocido'));
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAvailableDevices();
-  }, [token, navigate, setToken]);
-
-  const changeDevice = async (newDevice: string) => {
-    if (!newDevice || newDevice === selectedDevice) return;
+  // Función para obtener los dispositivos disponibles
+  const fetchAvailableDevices = async () => {
     try {
       setLoading(true);
       setError(null);
-      if (selectedDevice) {
-        await axios.post(
-          'http://localhost:5000/api/auth/devices/remove',
-          { device: selectedDevice },
-          { headers: { 'x-auth-token': token } }
-        );
-      }
-      await axios.post(
-        'http://localhost:5000/api/auth/devices/add',
-        { device: newDevice },
-        { headers: { 'x-auth-token': token } }
-      );
-      setSelectedDevice(newDevice);
-      setLocalHistory([]); // Reiniciar el historial local al cambiar de dispositivo
+      const response = await axios.get<string[]>('http://localhost:5000/api/sensor/devices', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const devices = response.data;
+
+      // Guardar en el estado y en localStorage
+      setAvailableDevices(devices);
+      localStorage.setItem('availableDevices', JSON.stringify(devices));
+
+      // Si no hay historial previo, inicializarlo en localStorage
+      const savedHistories = JSON.parse(localStorage.getItem('deviceHistories') || '{}');
+      const updatedHistories = { ...savedHistories };
+
+      devices.forEach(device => {
+        if (!updatedHistories[device]) {
+          updatedHistories[device] = [];
+        }
+      });
+
+      setDeviceHistories(updatedHistories);
+      localStorage.setItem('deviceHistories', JSON.stringify(updatedHistories));
+
     } catch (err: any) {
       if (err.response?.status === 401) {
         setError('Sesión expirada. Por favor, inicia sesión nuevamente.');
         setToken(null);
-        localStorage.removeItem('token'); // Limpiar el token del almacenamiento local
+        localStorage.removeItem('token');
         navigate('/login');
       } else {
-        setError('Error al cambiar de dispositivo: ' + (err.message || 'Desconocido'));
+        setError('Error al obtener dispositivos disponibles: ' + (err.message || 'Desconocido'));
       }
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!selectedDevice) return;
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await axios.get<SensorData>(`http://localhost:5000/api/data/realtime/${selectedDevice}`, {
-          headers: { 'x-auth-token': token },
-        });
-        const newData = response.data;
-        setData(newData);
-        // Solo mostramos la notificación si no es la primera carga
-        if (!isFirstLoad) {
-          setShowUpdateNotification(true);
-          setTimeout(() => setShowUpdateNotification(false), 5000);
-        }
-        setStartTime(new Date());
 
-        // Agregar el nuevo dato al historial local
-        setLocalHistory((prevHistory) => {
-          const updatedHistory = [...prevHistory, newData];
-          // Limitar el historial a las últimas MAX_HISTORY_ENTRIES entradas
-          if (updatedHistory.length > MAX_HISTORY_ENTRIES) {
-            return updatedHistory.slice(updatedHistory.length - MAX_HISTORY_ENTRIES);
-          }
-          return updatedHistory;
-        });
+  // Función para obtener los datos en tiempo real de todas las devices
+  const fetchData = async () => {
+    const devices = JSON.parse(localStorage.getItem('availableDevices') || '[]');
+    if (!devices.length) return;
 
-        // Marcamos que la primera carga ya ocurrió
-        setIsFirstLoad(false);
-      } catch (err: any) {
-        if (err.response?.status === 401) {
-          setError('Sesión expirada. Por favor, inicia sesión nuevamente.');
-          setToken(null);
-          localStorage.removeItem('token'); // Limpiar el token del almacenamiento local
-          navigate('/login');
-        } else {
-          setError('Error al obtener datos en tiempo real: ' + (err.message || 'Desconocido'));
+    try {
+      setLoading(true);
+      setError(null);
+
+      const updatedHistories = { ...deviceHistories };
+
+      await Promise.all(devices.map(async (device: string) => {
+        try {
+          const response = await axios.get<SensorData>(`http://localhost:5000/api/sensor/realtime/${device}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+
+          const newData = response.data;
+
+          // Agregar el nuevo dato al historial del dispositivo
+          updatedHistories[device] = [...(updatedHistories[device] || []), newData].slice(-MAX_HISTORY_ENTRIES);
+
+        } catch (err: any) {
+          console.error(`Error al obtener datos del dispositivo ${device}:`, err);
         }
-        setData(null);
-      } finally {
-        setLoading(false);
+      }));
+
+      setDeviceHistories(updatedHistories);
+      localStorage.setItem('deviceHistories', JSON.stringify(updatedHistories));
+
+      // Set data
+      const data = updatedHistories[selectedDevice]?.[updatedHistories[selectedDevice].length - 1];
+      setData(data || null);
+      setLocalHistory(updatedHistories[selectedDevice] || []);
+
+      if (!isFirstLoad) {
+        setShowUpdateNotification(true);
+        setTimeout(() => setShowUpdateNotification(false), 5000);
       }
-    };
 
+      setIsFirstLoad(false);
+    } catch (err: any) {
+      setError('Error al obtener datos en tiempo real: ' + (err.message || 'Desconocido'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const changeDevice = async (newDevice: string) => {
+    if (!newDevice || newDevice === selectedDevice) return;
+    try {
+      setLoading(true);
+      setError(null);
+      setSelectedDevice(newDevice);
+      localStorage.setItem('selectedDevice', newDevice);
+      setLocalHistory([]);
+      await fetchData();
+    } catch (err: any) {
+      setError('Error al cambiar de dispositivo: ' + (err.message || 'Desconocido'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAvailableDevices();
     fetchData();
     const interval = setInterval(() => {
       fetchData();
     }, UPDATE_INTERVAL);
-
     return () => clearInterval(interval);
   }, [selectedDevice, token, navigate, setToken]);
 
@@ -190,15 +154,8 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
       const remainingMs = Math.max(UPDATE_INTERVAL - timeElapsed, 0);
       setTimeRemaining(remainingMs);
     }, 1000);
-
     return () => clearInterval(timer);
   }, [startTime]);
-
-  const getTimeRemaining = () => {
-    const secondsRemaining = Math.floor(timeRemaining / 1000);
-    if (timeRemaining <= 0) return 'Actualización en curso...';
-    return `${secondsRemaining} seg restantes`;
-  };
 
   const getTimeSinceLastUpdate = () => {
     const now = new Date();
