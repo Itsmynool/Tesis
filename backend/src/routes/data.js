@@ -1,13 +1,11 @@
 import { Sequelize } from 'sequelize';
 import express from 'express';
-import SensorData from '../models/SensorData.js';
-import User from '../models/User.js';
-import auth from '../middleware/auth.js';
+import SensorData from '../models/SensorData.js'; 
 
 const router = express.Router();
 
 // Obtener todos los dispositivos disponibles (únicos en sensor_data)
-router.get('/devices', auth, async (req, res) => {
+router.get('/devices', async (req, res) => {
   try {
     // Obtener dispositivos únicos de la tabla sensor_data
     const devices = await SensorData.findAll({
@@ -25,17 +23,8 @@ router.get('/devices', auth, async (req, res) => {
 });
 
 // Obtener datos en tiempo real para un dispositivo
-router.get('/realtime/:device', auth, async (req, res) => {
+router.get('/realtime/:device', async (req, res) => {
   const { device } = req.params;
-  const user = await User.findById(req.user.id);
-
-  console.log('Requested device:', device);
-  console.log('User devices:', user.devices);
-
-  if (!user.devices.includes(device)) {
-    console.log('Access denied for device:', device);
-    return res.status(403).json({ message: 'Access denied to this device' });
-  }
 
   try {
     const data = await SensorData.findOne({
@@ -62,13 +51,8 @@ router.get('/realtime/:device', auth, async (req, res) => {
 });
 
 // Obtener historial de datos para un dispositivo
-router.get('/history/:device', auth, async (req, res) => {
+router.get('/history/:device', async (req, res) => {
   const { device } = req.params;
-  const user = await User.findById(req.user.id);
-
-  if (!user.devices.includes(device)) {
-    return res.status(403).json({ message: 'Access denied to this device' });
-  }
 
   try {
     const data = await SensorData.findAll({

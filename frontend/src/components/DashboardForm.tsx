@@ -86,6 +86,8 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
   const [endHour, setEndHour] = useState<number>(23);
   const [filteredData, setFilteredData] = useState<SensorData[]>([]);
   const [isHistoryExpanded, setIsHistoryExpanded] = useState<boolean>(false);
+  const [historyChartData, setHistoryChartData] = useState<any>({ labels: [], datasets: [] });
+  const [chartKey, setChartKey] = useState<number>(0); // Clave para forzar el re-renderizado del gráfico
 
   // Estado para controlar la visibilidad de las tarjetas
   const [cardVisibility, setCardVisibility] = useState({
@@ -101,13 +103,34 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
 
   // Usar el ts recibido sin modificaciones
   useEffect(() => {
-    const updatedData = history.map((item: SensorData) => {
-      const ts = item.ts || new Date().toISOString(); // Usar ts del backend o hora actual como respaldo
-      return { ...item, ts }; // Mantener ts como string válido
-    });
+    console.log('useEffect para filteredData disparado con history:', history);
+    const updatedData = history
+      .filter((item: SensorData) => {
+        // Validar que ts sea una cadena de fecha válida
+        const isValidDate = item.ts && !isNaN(new Date(item.ts).getTime());
+        if (!isValidDate) {
+          console.warn(`Entrada de historial con ts inválido para el dispositivo ${selectedDevice}:`, item);
+        }
+        return isValidDate;
+      })
+      .map((item: SensorData) => {
+        const ts = item.ts || new Date().toISOString(); // Usar ts del backend o hora actual como respaldo
+        return { ...item, ts }; // Mantener ts como string válido
+      });
     setFilteredData(updatedData);
-    console.log('filteredData actualizado con timestamps:', updatedData); // Depuración
-  }, [history]);
+    console.log(`filteredData actualizado para el dispositivo ${selectedDevice} con timestamps:`, updatedData);
+  }, [history, selectedDevice]);
+
+  // Actualizar el gráfico del historial cada vez que cambie filteredData o showHistory
+  useEffect(() => {
+    if (showHistory) {
+      console.log('useEffect para historyChartData disparado con filteredData:', filteredData);
+      const chartData = filteredHistoryChartData(showHistory);
+      setHistoryChartData(chartData);
+      setChartKey((prev) => prev + 1); // Incrementar la clave para forzar el re-renderizado
+      console.log('Gráfico del historial actualizado:', chartData);
+    }
+  }, [filteredData, showHistory]);
 
   // Obtener el rango de fechas disponible en el historial
   const getAvailableDateRange = () => {
@@ -161,8 +184,10 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
     console.log('Filtro aplicado, datos filtrados:', filtered);
   };
 
-  const filteredHistoryChartData = (dataKey: string) => {
-    if (filteredData.length === 0) return { labels: [], datasets: [] };
+  const filteredHistoryChartData = (dataKey: string | null) => {
+    if (!dataKey || filteredData.length === 0) {
+      return { labels: [], datasets: [] };
+    }
 
     const sampledData = filteredData; // Mostramos todos los datos, sin muestreo
 
@@ -606,7 +631,8 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
           ) : (
             <div className={`transition-all duration-300 ${isHistoryExpanded ? 'h-96' : 'h-48'}`}>
               <Line
-                data={filteredHistoryChartData(showHistory)}
+                key={chartKey} // Forzar re-renderizado del gráfico
+                data={historyChartData} // Usar el estado en lugar de la función directamente
                 options={{
                   responsive: true,
                   maintainAspectRatio: false,

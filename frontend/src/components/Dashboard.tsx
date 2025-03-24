@@ -5,7 +5,6 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 import { DashboardProps, SensorData } from '../types';
 import DashboardForm from './DashboardForm';
 import 'leaflet/dist/leaflet.css';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 
 // Corrige el ícono predeterminado de Leaflet
@@ -29,8 +28,33 @@ interface DeviceLocation {
 // Mapeo manual de direcciones MAC a ubicaciones (Cali, Medellín, Bogotá)
 const deviceLocationsMap: { [key: string]: { name: string; lat: number; lng: number } } = {
   '00:0f:00:70:91:0a': { name: 'Sensor Cali', lat: 3.4372, lng: -76.5225 }, // Cali
-  '1c:bfce:15:ec:4d': { name: 'Sensor Medellín', lat: 6.2442, lng: -75.5812 }, // Medellín
+  '1c:bf:ce:15:ec:4d': { name: 'Sensor Medellín', lat: 6.2442, lng: -75.5812 }, // Medellín
   'b8:27:eb:bf:9d:51': { name: 'Sensor Bogotá', lat: 4.7110, lng: -74.0721 }, // Bogotá
+};
+
+// Lista de dispositivos (para las consultas)
+const DEVICES = [
+  'b8:27:eb:bf:9d:51',
+  '1c:bf:ce:15:ec:4d',
+  '00:0f:00:70:91:0a',
+];
+
+// Límite máximo de entradas en el historial por dispositivo
+const MAX_HISTORY_ENTRIES = 100;
+
+// Función para obtener el historial desde localStorage
+const loadHistoryFromLocalStorage = (deviceId: string): SensorData[] => {
+  const key = `history_${deviceId}`;
+  const stored = localStorage.getItem(key);
+  console.log(`Cargando historial desde localStorage para ${deviceId}:`, stored ? JSON.parse(stored) : []);
+  return stored ? JSON.parse(stored) : [];
+};
+
+// Función para guardar el historial en localStorage
+const saveHistoryToLocalStorage = (deviceId: string, history: SensorData[]) => {
+  const key = `history_${deviceId}`;
+  console.log(`Guardando historial en localStorage para ${deviceId}:`, history);
+  localStorage.setItem(key, JSON.stringify(history));
 };
 
 const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
@@ -38,18 +62,26 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
   const [deviceLocations, setDeviceLocations] = useState<DeviceLocation[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string>(devices[0] || '');
   const [data, setData] = useState<SensorData | null>(null);
-  const [localHistory, setLocalHistory] = useState<SensorData[]>([]); // Historial local
+  const [localHistory, setLocalHistory] = useState<{ [key: string]: SensorData[] }>({}); // Historial por dispositivo
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState<string | null>(null);
   const [startTime, setStartTime] = useState<Date>(new Date());
-  const [timeRemaining, setTimeRemaining] = useState<number>(30000); // Inicializamos con 30 segundos
+  const [timeRemaining, setTimeRemaining] = useState<number>(10000); // Inicializamos con 10 segundos
   const [showUpdateNotification, setShowUpdateNotification] = useState<boolean>(false);
   const [isFirstLoad, setIsFirstLoad] = useState<boolean>(true); // Nueva variable para rastrear la primera carga
   const navigate = useNavigate();
 
-  const UPDATE_INTERVAL = 30000; // 30 segundos en milisegundos
-  const MAX_HISTORY_ENTRIES = 100; // Límite de entradas en el historial local
+  const UPDATE_INTERVAL = 10000; // 10 segundos en milisegundos
+
+  // Cargar el historial desde localStorage al montar el componente
+  useEffect(() => {
+    const initialHistory: { [key: string]: SensorData[] } = {};
+    DEVICES.forEach((device) => {
+      initialHistory[device] = loadHistoryFromLocalStorage(device);
+    });
+    setLocalHistory(initialHistory);
+  }, []);
 
   // Obtener dispositivos y mapearlos a ubicaciones
   useEffect(() => {
@@ -115,7 +147,13 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
         { headers: { 'x-auth-token': token } }
       );
       setSelectedDevice(newDevice);
-      setLocalHistory([]); // Reiniciar el historial local al cambiar de dispositivo
+      setShowHistory(null); // Resetear el historial al cambiar de dispositivo
+      // Actualizar los datos actuales del nuevo dispositivo seleccionado
+      if (localHistory[newDevice] && localHistory[newDevice].length > 0) {
+        setData(localHistory[newDevice][localHistory[newDevice].length - 1]);
+      } else {
+        setData(null);
+      }
     } catch (err: any) {
       if (err.response?.status === 401) {
         setError('Sesión expirada. Por favor, inicia sesión nuevamente.');
@@ -130,17 +168,21 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
     }
   };
 
+  // Realizar consultas para el dispositivo seleccionado cada 10 segundos
   useEffect(() => {
     const fetchData = async () => {
       if (!selectedDevice) return;
       try {
         setLoading(true);
         setError(null);
+        console.log(`Solicitando datos para el dispositivo ${selectedDevice}...`);
         const response = await axios.get<SensorData>(`http://localhost:5000/api/data/realtime/${selectedDevice}`, {
           headers: { 'x-auth-token': token },
         });
         const newData = response.data;
+        console.log(`Datos recibidos para el dispositivo ${selectedDevice}:`, newData);
         setData(newData);
+
         // Solo mostramos la notificación si no es la primera carga
         if (!isFirstLoad) {
           setShowUpdateNotification(true);
@@ -148,13 +190,21 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
         }
         setStartTime(new Date());
 
-        // Agregar el nuevo dato al historial local
+        // Agregar el nuevo dato al historial del dispositivo seleccionado
         setLocalHistory((prevHistory) => {
-          const updatedHistory = [...prevHistory, newData];
+          const deviceHistory = prevHistory[selectedDevice] || [];
+          const updatedDeviceHistory = [...deviceHistory, newData];
           // Limitar el historial a las últimas MAX_HISTORY_ENTRIES entradas
-          if (updatedHistory.length > MAX_HISTORY_ENTRIES) {
-            return updatedHistory.slice(updatedHistory.length - MAX_HISTORY_ENTRIES);
+          if (updatedDeviceHistory.length > MAX_HISTORY_ENTRIES) {
+            updatedDeviceHistory.splice(0, updatedDeviceHistory.length - MAX_HISTORY_ENTRIES);
           }
+          const updatedHistory = {
+            ...prevHistory,
+            [selectedDevice]: updatedDeviceHistory,
+          };
+          // Guardar en localStorage
+          saveHistoryToLocalStorage(selectedDevice, updatedDeviceHistory);
+          console.log(`Historial actualizado para ${selectedDevice}:`, updatedDeviceHistory);
           return updatedHistory;
         });
 
@@ -175,14 +225,23 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
       }
     };
 
+    // Realizar la primera consulta inmediatamente
     fetchData();
+
+    // Configurar un intervalo para consultar cada 10 segundos
     const interval = setInterval(() => {
+      console.log('Intervalo disparado: solicitando nuevos datos...');
       fetchData();
     }, UPDATE_INTERVAL);
 
-    return () => clearInterval(interval);
+    // Limpiar el intervalo al desmontar el componente
+    return () => {
+      console.log('Limpiando intervalo...');
+      clearInterval(interval);
+    };
   }, [selectedDevice, token, navigate, setToken]);
 
+  // Temporizador para mostrar el tiempo restante hasta la próxima actualización
   useEffect(() => {
     const timer = setInterval(() => {
       const now = new Date();
@@ -209,8 +268,10 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
   };
 
   const updateHistoryChartData = (dataKey: string) => {
-    if (localHistory.length > 0) {
-      const labels = localHistory.map((entry) => new Date(entry.ts).toLocaleTimeString('es-ES'));
+    const history = selectedDevice ? localHistory[selectedDevice] || [] : [];
+    console.log(`updateHistoryChartData llamado con dataKey: ${dataKey}, history:`, history);
+    if (history.length > 0) {
+      const labels = history.map((entry) => new Date(entry.ts).toLocaleTimeString('es-ES'));
       let chartData;
 
       if (dataKey === 'airQuality') {
@@ -219,7 +280,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
           datasets: [
             {
               label: 'Calidad del Aire',
-              data: localHistory.map((item) =>
+              data: history.map((item) =>
                 Math.min(
                   100,
                   Math.max(
@@ -241,7 +302,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
           datasets: [
             {
               label: dataKey.charAt(0).toUpperCase() + dataKey.slice(1),
-              data: localHistory.map((item) => item[dataKey as keyof SensorData]),
+              data: history.map((item) => item[dataKey as keyof SensorData]),
               borderColor: getColor(dataKey),
               backgroundColor: getColor(dataKey, 0.2),
               tension: 0.3,
@@ -251,6 +312,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
         };
       }
 
+      console.log(`Datos del gráfico generados para ${dataKey}:`, chartData);
       return chartData;
     }
     return { labels: [], datasets: [] };
@@ -378,7 +440,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
           selectedDevice={selectedDevice}
           changeDevice={changeDevice}
           data={data}
-          history={localHistory} // Pasamos el historial local
+          history={selectedDevice ? localHistory[selectedDevice] || [] : []} // Pasamos el historial del dispositivo seleccionado
           showHistory={showHistory}
           setShowHistory={setShowHistory}
           updateHistoryChartData={updateHistoryChartData}
@@ -391,6 +453,12 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
       {loading && (
         <div className="absolute top-2 left-2 bg-gray-700 text-white px-2 py-1 rounded-full text-sm">
           Actualizando...
+        </div>
+      )}
+
+      {showUpdateNotification && (
+        <div className="absolute top-2 right-2 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg">
+          Datos actualizados
         </div>
       )}
     </div>

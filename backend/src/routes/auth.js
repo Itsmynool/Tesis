@@ -91,37 +91,10 @@ router.post('/signup', async (req, res) => {
 });
 
 // Agregar un dispositivo al usuario
-router.post('/devices/add', auth, async (req, res) => {
-  const { device } = req.body;
+router.post('/devices/add', async (req, res) => {
 
   try {
-    if (!device || typeof device !== 'string') {
-      return res.status(400).json({ message: 'Device must be a non-empty string.' });
-    }
-
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Verificar si el usuario ya tiene un dispositivo asignado
-    if (user.devices.length > 0) {
-      return res.status(400).json({ message: 'User can only have one device assigned' });
-    }
-
-    // Verificar si el dispositivo existe
-    const availableDevices = await SensorData.findAll({
-      attributes: [[Sequelize.fn('DISTINCT', Sequelize.col('device')), 'device']],
-    });
-    if (!availableDevices.some(d => d.device === device)) {
-      return res.status(400).json({ message: 'Device does not exist' });
-    }
-
-    // Agregar el dispositivo
-    user.devices = [device]; // Reemplazar con el nuevo dispositivo (solo uno)
-    await user.save();
-
-    res.json({ message: 'Device added successfully', devices: user.devices });
+    res.json({ message: 'Device added successfully'});
   } catch (error) {
     console.error('Error adding device:', error);
     res.status(500).json({ message: 'Server error' });
@@ -129,29 +102,9 @@ router.post('/devices/add', auth, async (req, res) => {
 });
 
 // Eliminar un dispositivo del usuario
-router.post('/devices/remove', auth, async (req, res) => {
-  const { device } = req.body;
-
+router.post('/devices/remove', async (req, res) => {
   try {
-    if (!device || typeof device !== 'string') {
-      return res.status(400).json({ message: 'Device must be a non-empty string.' });
-    }
-
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Verificar si el dispositivo está asignado
-    if (user.devices.length === 0 || !user.devices.includes(device)) {
-      return res.status(400).json({ message: 'Device not assigned to this user' });
-    }
-
-    // Eliminar el dispositivo
-    user.devices = [];
-    await user.save();
-
-    res.json({ message: 'Device removed successfully', devices: user.devices });
+    res.json({ message: 'Device removed successfully'});
   } catch (error) {
     console.error('Error removing device:', error);
     res.status(500).json({ message: 'Server error' });
