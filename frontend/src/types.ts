@@ -1,6 +1,6 @@
 
 export interface AuthProps {
-  setToken: (token: string | null, devices?: string[]) => void;
+  setToken: (token: string) => void;
 }
 
 export interface DashboardProps {

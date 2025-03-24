@@ -26,7 +26,7 @@ const Signup: React.FC<AuthProps> = ({ setToken }) => {
           devices: ['b8:27:eb:bf:9d:51'], // Dispositivo por defecto al registrarse
         }
       );
-      setToken(response.data.token, response.data.devices);
+      setToken(response.data.token);
       navigate('/dashboard');
     } catch (err) {
       const error = err as AxiosError<ErrorResponse>;

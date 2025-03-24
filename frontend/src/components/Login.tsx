@@ -18,14 +18,15 @@ const Login: React.FC<AuthProps> = ({ setToken }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await axios.post<{ token: string; devices: string[] }>(
+      const response = await axios.post<{ token: string; }>(
         'http://localhost:5000/api/auth/login',
         {
           username,
           password,
         }
       );
-      setToken(response.data.token, response.data.devices);
+      setToken(response.data.token);
+      console.log(response.data.token);
       navigate('/dashboard');
     } catch (err) {
       const error = err as AxiosError<ErrorResponse>;
