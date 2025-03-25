@@ -7,58 +7,60 @@ import DashboardForm from './DashboardForm';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement, BarElement);
 
-
+// Function for the dashboard
 const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
+  // Constans for dashboard in time and max history
+  const UPDATE_INTERVAL = 10000;
+  const MAX_HISTORY_ENTRIES = 100; 
+  
+  // State for available devices
   const [availableDevices, setAvailableDevices] = useState<string[]>([]);
+  // State for selected device in base of localStorage or first device
   const [selectedDevice, setSelectedDevice] = useState<string>(() => {
-    return localStorage.getItem('selectedDevice') || devices[0] || '';
+    const savedDevice = localStorage.getItem('selectedDevice');
+    const availableDevices = JSON.parse(localStorage.getItem('availableDevices') || '[]');
+    return savedDevice || availableDevices[0] || '';
   });
-  const [deviceHistories, setDeviceHistories] = useState<Record<string, SensorData[]>>(() => {
+  // State for device histories in base of localStorage
+  const [, setDeviceHistories] = useState<Record<string, SensorData[]>>(() => {
     return JSON.parse(localStorage.getItem('deviceHistories') || '{}');
   });
+  // State for set data from selected device in dashboard
   const [data, setData] = useState<SensorData | null>(null);
-  const [localHistory, setLocalHistory] = useState<SensorData[]>([]); // Historial local
+  // State for history of selected device in dashboard
+  const [localHistory, setLocalHistory] = useState<SensorData[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState<string | null>(null);
-  const [startTime, setStartTime] = useState<Date>(new Date());
-  const [timeRemaining, setTimeRemaining] = useState<number>(30000); // Inicializamos con 30 segundos
-  const [showUpdateNotification, setShowUpdateNotification] = useState<boolean>(false);
-  const [isFirstLoad, setIsFirstLoad] = useState<boolean>(true); // Nueva variable para rastrear la primera carga
+  const [startTime] = useState<Date>(new Date());
+  const [, setTimeRemaining] = useState<number>(30000);
+  const [, setShowUpdateNotification] = useState<boolean>(false);
+  const [isFirstLoad, setIsFirstLoad] = useState<boolean>(true); 
   const navigate = useNavigate();
 
-  const UPDATE_INTERVAL = 10000; // 30 segundos en milisegundos
-  const MAX_HISTORY_ENTRIES = 100; // Límite de entradas en el historial local
-
-  // Función para obtener los dispositivos disponibles
+  // Function for fetch available devices in dashboard
   const fetchAvailableDevices = async () => {
     try {
       setLoading(true);
       setError(null);
+      // Call API to get available devices
       const response = await axios.get<string[]>('http://localhost:5000/api/sensor/devices', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
+      // Set available devices
       const devices = response.data;
-
-      // Guardar en el estado y en localStorage
       setAvailableDevices(devices);
       localStorage.setItem('availableDevices', JSON.stringify(devices));
-
-      // Si no hay historial previo, inicializarlo en localStorage
-      const savedHistories = JSON.parse(localStorage.getItem('deviceHistories') || '{}');
-      const updatedHistories = { ...savedHistories };
-
-      devices.forEach(device => {
-        if (!updatedHistories[device]) {
-          updatedHistories[device] = [];
-        }
-      });
-
-      setDeviceHistories(updatedHistories);
-      localStorage.setItem('deviceHistories', JSON.stringify(updatedHistories));
-
+      // Set selected device
+      const savedDevice = localStorage.getItem('selectedDevice');
+      // If no saved device or not in available devices, set first device
+      if (!savedDevice || !devices.includes(savedDevice)) {
+        const firstDevice = devices[0] || '';
+        setSelectedDevice(firstDevice);
+        localStorage.setItem('selectedDevice', firstDevice);
+      }
     } catch (err: any) {
       if (err.response?.status === 401) {
         setError('Sesión expirada. Por favor, inicia sesión nuevamente.');
@@ -73,47 +75,51 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
     }
   };
 
-
-  // Función para obtener los datos en tiempo real de todas las devices
+  // Function for fetch data in dashboard in real time
   const fetchData = async () => {
+    // Get available devices from localStorage
     const devices = JSON.parse(localStorage.getItem('availableDevices') || '[]');
+    // If no devices, return
     if (!devices.length) return;
-
     try {
       setLoading(true);
       setError(null);
-
-      const updatedHistories = { ...deviceHistories };
-
+      // Call API to get data from each device in real time for 3 devices in parallel
       await Promise.all(devices.map(async (device: string) => {
         try {
+          // Call API to get data from device in real time
           const response = await axios.get<SensorData>(`http://localhost:5000/api/sensor/realtime/${device}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
-
+          // Get data
           const newData = response.data;
-
-          // Agregar el nuevo dato al historial del dispositivo
-          updatedHistories[device] = [...(updatedHistories[device] || []), newData].slice(-MAX_HISTORY_ENTRIES);
-
+          // Update device history
+          setDeviceHistories(prevHistories => {
+              // Add new data to history
+            const updatedDeviceHistory = [...(prevHistories[device] || []), newData].slice(-MAX_HISTORY_ENTRIES);
+            // Update history in localStorage
+            const updatedHistories = { ...prevHistories, [device]: updatedDeviceHistory };
+            localStorage.setItem('deviceHistories', JSON.stringify(updatedHistories)); 
+            // Return updated history
+            return updatedHistories;
+          });
         } catch (err: any) {
           console.error(`Error al obtener datos del dispositivo ${device}:`, err);
         }
       }));
-
-      setDeviceHistories(updatedHistories);
-      localStorage.setItem('deviceHistories', JSON.stringify(updatedHistories));
-
-      // Set data
-      const data = updatedHistories[selectedDevice]?.[updatedHistories[selectedDevice].length - 1];
-      setData(data || null);
-      setLocalHistory(updatedHistories[selectedDevice] || []);
-
+      // Update local history and data from selected device
+      setDeviceHistories(prevHistories => {
+        const updatedHistories = { ...prevHistories };
+        const latestData = updatedHistories[selectedDevice]?.[updatedHistories[selectedDevice].length - 1] || null;
+        setData(latestData);
+        setLocalHistory(updatedHistories[selectedDevice] || []);
+        return updatedHistories;
+      });
+      // Update time remaining
       if (!isFirstLoad) {
         setShowUpdateNotification(true);
         setTimeout(() => setShowUpdateNotification(false), 5000);
       }
-
       setIsFirstLoad(false);
     } catch (err: any) {
       setError('Error al obtener datos en tiempo real: ' + (err.message || 'Desconocido'));
@@ -122,7 +128,9 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
     }
   };
 
+  // Function for change device
   const changeDevice = async (newDevice: string) => {
+    // If new device is the same as selected device, return
     if (!newDevice || newDevice === selectedDevice) return;
     try {
       setLoading(true);
@@ -138,6 +146,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
     }
   };
 
+  // UseEffect for fetch available devices and data
   useEffect(() => {
     fetchAvailableDevices();
     fetchData();
@@ -147,6 +156,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
     return () => clearInterval(interval);
   }, [selectedDevice, token, navigate, setToken]);
 
+  // UseEffect for update time remaining
   useEffect(() => {
     const timer = setInterval(() => {
       const now = new Date();
