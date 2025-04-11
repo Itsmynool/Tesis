@@ -175,49 +175,118 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
     return `Actualizado hace ${diffSeconds} segundo${diffSeconds === 1 ? '' : 's'}`;
   };
 
+  // Function to predict the next value using linear extrapolation
+  const predictNextValue = (history: SensorData[], dataKey: string): number => {
+    if (history.length < 2) {
+      return history.length > 0 ? history[history.length - 1][dataKey as keyof SensorData] as number : 0;
+    }
+
+    const lastValue = history[history.length - 1][dataKey as keyof SensorData] as number;
+    const secondLastValue = history[history.length - 2][dataKey as keyof SensorData] as number;
+
+    const trend = lastValue - secondLastValue;
+    const predicted = lastValue + trend;
+    console.log(`Predicción para ${dataKey}: lastValue=${lastValue}, secondLastValue=${secondLastValue}, trend=${trend}, predicted=${predicted}`);
+    return predicted;
+  };
+
   const updateHistoryChartData = (dataKey: string) => {
     if (localHistory.length > 0) {
+      // Labels for the X-axis (timestamps)
       const labels = localHistory.map((entry) => new Date(entry.ts).toLocaleTimeString('es-ES'));
+
+      // Historical data
+      const historicalData = localHistory.map((item) => {
+        let value: number;
+        if (dataKey === 'airQuality') {
+          value = Math.min(
+            100,
+            Math.max(
+              0,
+              100 - ((item.co * 10000 + item.lpg * 10000 + (item.smoke ? 50 : 0)) / 100)
+            )
+          );
+        } else {
+          value = item[dataKey as keyof SensorData] as number;
+          if (dataKey === 'light' || dataKey === 'motion') {
+            value = value ? 1 : 0;
+          }
+        }
+        return value;
+      });
+
+      // Predict the next value
+      const predictedValue = predictNextValue(localHistory, dataKey);
+      const allLabels = [...labels, 'Predicción'];
+
+      // Log para depurar los datos
+      console.log(`Datos históricos para ${dataKey}:`, historicalData);
+      console.log(`Valor predicho para ${dataKey}:`, predictedValue);
+      console.log(`Etiquetas (labels):`, allLabels);
+
       let chartData;
 
       if (dataKey === 'airQuality') {
         chartData = {
-          labels,
+          labels: allLabels,
           datasets: [
             {
               label: 'Calidad del Aire',
-              data: localHistory.map((item) =>
-                Math.min(
-                  100,
-                  Math.max(
-                    0,
-                    100 - ((item.co * 10000 + item.lpg * 10000 + (item.smoke ? 50 : 0)) / 100)
-                  )
-                )
-              ),
+              data: historicalData,
               borderColor: 'rgba(75, 192, 192, 1)',
               backgroundColor: 'rgba(75, 192, 192, 0.2)',
+              borderWidth: 1, // Líneas más delgadas
               tension: 0.3,
               fill: false,
+              pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+              pointRadius: 3, // Puntos más pequeños
+              pointHoverRadius: 5, // Puntos más pequeños al hacer hover
+            },
+            {
+              label: 'Predicción',
+              data: Array(historicalData.length).fill(null).concat([predictedValue]),
+              borderColor: 'rgba(255, 99, 132, 1)',
+              backgroundColor: 'rgba(255, 99, 132, 1)',
+              pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+              pointBorderColor: 'rgba(255, 99, 132, 1)',
+              pointRadius: 5, // Punto de predicción más pequeño
+              pointHoverRadius: 7, // Punto de predicción más pequeño al hacer hover
+              showLine: false, // No conectar el punto predicho con una línea
             },
           ],
         };
       } else {
         chartData = {
-          labels,
+          labels: allLabels,
           datasets: [
             {
               label: dataKey.charAt(0).toUpperCase() + dataKey.slice(1),
-              data: localHistory.map((item) => item[dataKey as keyof SensorData]),
+              data: historicalData,
               borderColor: getColor(dataKey),
               backgroundColor: getColor(dataKey, 0.2),
+              borderWidth: 1, // Líneas más delgadas
               tension: 0.3,
               fill: false,
+              pointBackgroundColor: getColor(dataKey),
+              pointRadius: 3, // Puntos más pequeños
+              pointHoverRadius: 5, // Puntos más pequeños al hacer hover
+            },
+            {
+              label: 'Predicción',
+              data: Array(historicalData.length).fill(null).concat([predictedValue]),
+              borderColor: 'rgba(255, 99, 132, 1)',
+              backgroundColor: 'rgba(255, 99, 132, 1)',
+              pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+              pointBorderColor: 'rgba(255, 99, 132, 1)',
+              pointRadius: 5, // Punto de predicción más pequeño
+              pointHoverRadius: 7, // Punto de predicción más pequeño al hacer hover
+              showLine: false, // No conectar el punto predicho con una línea
             },
           ],
         };
       }
 
+      console.log(`Datos de la gráfica para ${dataKey}:`, chartData);
       return chartData;
     }
     return { labels: [], datasets: [] };

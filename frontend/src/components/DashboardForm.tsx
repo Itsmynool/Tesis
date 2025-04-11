@@ -269,6 +269,11 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
         .filter((value): value is number => typeof value === 'number');
     }
 
+    // Agregar el valor predicho al cálculo del rango
+    const chartData = updateHistoryChartData(dataKey);
+    const predictedValue = chartData.datasets[1]?.data[filteredData.length] || 0; // El valor predicho está en el segundo dataset
+    values.push(predictedValue);
+
     if (values.length === 0) return { min: 0, max: 100, stepSize: 10 };
 
     const minValue = Math.min(...values);
@@ -302,6 +307,7 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
       stepSize = (adjustedMax - adjustedMin) / 10; // Valor por defecto, 10 etiquetas
     }
 
+    console.log(`Rango del eje Y para ${dataKey}: min=${adjustedMin}, max=${adjustedMax}, stepSize=${stepSize}`);
     return {
       min: adjustedMin,
       max: adjustedMax,
@@ -604,9 +610,9 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
               No hay datos disponibles.
             </div>
           ) : (
-            <div className={`transition-all duration-300 ${isHistoryExpanded ? 'h-96' : 'h-48'}`}>
+            <div className={`transition-all duration-300 w-full ${isHistoryExpanded ? 'h-96' : 'h-48'}`}>
               <Line
-                data={filteredHistoryChartData(showHistory)}
+                data={updateHistoryChartData(showHistory)} // Cambiado de filteredHistoryChartData a updateHistoryChartData
                 options={{
                   responsive: true,
                   maintainAspectRatio: false,
@@ -619,21 +625,37 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                           const label = context.dataset.label || '';
                           const value = context.parsed.y;
                           const index = context.dataIndex;
-                          const timestamp = new Date(filteredData[index].ts).toLocaleTimeString('en-US', {
-                            hour12: false,
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit',
-                          }); // Mostrar solo HH:mm:ss sin ajustar zona horaria
-                          let valueStr;
-                          if (showHistory === 'light') {
-                            valueStr = value === 1 ? 'Encendido' : 'Apagado';
-                          } else if (showHistory === 'motion') {
-                            valueStr = value === 1 ? 'Sí' : 'No';
+                          const datasetIndex = context.datasetIndex;
+
+                          if (datasetIndex === 1) {
+                            // Este es el dataset de predicción
+                            let valueStr;
+                            if (showHistory === 'light') {
+                              valueStr = value === 1 ? 'Encendido' : 'Apagado';
+                            } else if (showHistory === 'motion') {
+                              valueStr = value === 1 ? 'Sí' : 'No';
+                            } else {
+                              valueStr = value.toString();
+                            }
+                            return `${label}: ${valueStr} (Predicción)`;
                           } else {
-                            valueStr = value.toString();
+                            // Este es el dataset de datos históricos
+                            const timestamp = new Date(filteredData[index].ts).toLocaleTimeString('en-US', {
+                              hour12: false,
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              second: '2-digit',
+                            });
+                            let valueStr;
+                            if (showHistory === 'light') {
+                              valueStr = value === 1 ? 'Encendido' : 'Apagado';
+                            } else if (showHistory === 'motion') {
+                              valueStr = value === 1 ? 'Sí' : 'No';
+                            } else {
+                              valueStr = value.toString();
+                            }
+                            return `${label}: ${valueStr} (Hora: ${timestamp})`;
                           }
-                          return `${label}: ${valueStr} (Hora: ${timestamp})`;
                         },
                       },
                     },
@@ -646,8 +668,21 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                         color: 'white',
                       },
                       ticks: {
-                        display: false, // Ocultar todas las etiquetas del eje X
+                        display: true, // Mostrar etiquetas del eje X
                         color: 'white',
+                        callback: (value, index) => {
+                          // Mostrar solo la última etiqueta como "Predicción" si es el punto predicho
+                          if (index === filteredData.length) {
+                            return 'Predicción';
+                          }
+                          // Mostrar la hora para los puntos históricos
+                          return new Date(filteredData[index]?.ts).toLocaleTimeString('en-US', {
+                            hour12: false,
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                          });
+                        },
                       },
                       grid: { display: false },
                     },

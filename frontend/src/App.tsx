@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-d
 import Login from './components/Login';
 import Signup from './components/Signup';
 import Dashboard from './components/Dashboard';
+import HomePage from './components/HomePage'; // Importamos el nuevo componente
 
 const App: React.FC = () => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
@@ -33,6 +34,8 @@ const App: React.FC = () => {
   return (
     <Router>
       <Routes>
+        {/* Ruta para la página de inicio */}
+        <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<Login setToken={handleSetToken} />} />
         <Route path="/signup" element={<Signup setToken={handleSetToken} />} />
         <Route
@@ -45,7 +48,8 @@ const App: React.FC = () => {
             )
           }
         />
-        <Route path="/" element={<Navigate to={token ? '/dashboard' : '/login'} />} />
+        {/* Redirigir cualquier ruta desconocida a la página de inicio */}
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Router>
   );
