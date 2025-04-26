@@ -48,7 +48,7 @@ const TemperatureGauge: React.FC<TemperatureGaugeProps> = ({ temperature }) => {
           x="5" /* Centrado respecto a la barra: (60 - 30) / 2 = 15, pero ajustado a 5 para que sobresalga */
           width="30" /* Más ancha para mejor visibilidad */
           height="3" /* Alto de la barrita */
-          fill="white"
+          fill="black"
           className="transition-all duration-1000 ease-in-out"
           style={{
             transform: `translateY(${adjustedPosition}px)`, // Mueve la barra entre y=10 y y=110
@@ -56,11 +56,11 @@ const TemperatureGauge: React.FC<TemperatureGaugeProps> = ({ temperature }) => {
         />
 
         {/* Etiquetas de la escala de temperatura (ajustadas para no solaparse) */}
-        <text x="40" y="10" fill="white" fontSize="8" textAnchor="start">30</text>
-        <text x="40" y="35" fill="white" fontSize="8" textAnchor="start">20</text>
-        <text x="40" y="60" fill="white" fontSize="8" textAnchor="start">10</text>
-        <text x="40" y="85" fill="white" fontSize="8" textAnchor="start">0</text>
-        <text x="40" y="110" fill="white" fontSize="8" textAnchor="start">-10</text>
+        <text x="40" y="10" fill="black" fontSize="8" textAnchor="start">30</text>
+        <text x="40" y="35" fill="black" fontSize="8" textAnchor="start">20</text>
+        <text x="40" y="60" fill="black" fontSize="8" textAnchor="start">10</text>
+        <text x="40" y="85" fill="black" fontSize="8" textAnchor="start">0</text>
+        <text x="40" y="110" fill="black" fontSize="8" textAnchor="start">-10</text>
       </svg>
     </div>
   );

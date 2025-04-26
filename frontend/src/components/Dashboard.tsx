@@ -7,60 +7,36 @@ import DashboardForm from './DashboardForm';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement, BarElement);
 
-// Function for the dashboard
 const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
-  // Constans for dashboard in time and max history
-  const UPDATE_INTERVAL = 10000;
-  const MAX_HISTORY_ENTRIES = 100; 
-  
-  // State for available devices
+  const UPDATE_INTERVAL = 30000; // 30 segundos
+  const MAX_HISTORY_ENTRIES = 100;
+
   const [availableDevices, setAvailableDevices] = useState<string[]>([]);
-  // State for selected device in base of localStorage or first device
-  const [selectedDevice, setSelectedDevice] = useState<string>(() => {
-    const savedDevice = localStorage.getItem('selectedDevice');
-    const availableDevices = JSON.parse(localStorage.getItem('availableDevices') || '[]');
-    return savedDevice || availableDevices[0] || '';
-  });
-  // State for device histories in base of localStorage
-  const [, setDeviceHistories] = useState<Record<string, SensorData[]>>(() => {
+  const [deviceHistories, setDeviceHistories] = useState<Record<string, SensorData[]>>(() => {
     return JSON.parse(localStorage.getItem('deviceHistories') || '{}');
   });
-  // State for set data from selected device in dashboard
-  const [data, setData] = useState<SensorData | null>(null);
-  // State for history of selected device in dashboard
-  const [localHistory, setLocalHistory] = useState<SensorData[]>([]);
+  const [data, setData] = useState<Record<string, SensorData | null>>({});
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [showHistory, setShowHistory] = useState<string | null>(null);
-  const [startTime] = useState<Date>(new Date());
-  const [, setTimeRemaining] = useState<number>(30000);
-  const [, setShowUpdateNotification] = useState<boolean>(false);
-  const [isFirstLoad, setIsFirstLoad] = useState<boolean>(true); 
+  const [showHistory, setShowHistory] = useState<{ device: string; dataType: string } | null>(null);
+  const [startTime, setStartTime] = useState<Date>(new Date());
+  const [timeRemaining, setTimeRemaining] = useState<number>(UPDATE_INTERVAL / 1000); // En segundos
+  const [showUpdateNotification, setShowUpdateNotification] = useState<boolean>(false);
+  const [isFirstLoad, setIsFirstLoad] = useState<boolean>(true);
   const navigate = useNavigate();
 
-  // Function for fetch available devices in dashboard
   const fetchAvailableDevices = async () => {
     try {
       setLoading(true);
       setError(null);
-      // Call API to get available devices
       const response = await axios.get<string[]>('http://localhost:5000/api/sensor/devices', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
-      // Set available devices
       const devices = response.data;
       setAvailableDevices(devices);
       localStorage.setItem('availableDevices', JSON.stringify(devices));
-      // Set selected device
-      const savedDevice = localStorage.getItem('selectedDevice');
-      // If no saved device or not in available devices, set first device
-      if (!savedDevice || !devices.includes(savedDevice)) {
-        const firstDevice = devices[0] || '';
-        setSelectedDevice(firstDevice);
-        localStorage.setItem('selectedDevice', firstDevice);
-      }
     } catch (err: any) {
       if (err.response?.status === 401) {
         setError('Sesión expirada. Por favor, inicia sesión nuevamente.');
@@ -75,52 +51,45 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
     }
   };
 
-  // Function for fetch data in dashboard in real time
   const fetchData = async () => {
-    // Get available devices from localStorage
     const devices = JSON.parse(localStorage.getItem('availableDevices') || '[]');
-    // If no devices, return
     if (!devices.length) return;
     try {
       setLoading(true);
       setError(null);
-      // Call API to get data from each device in real time for 3 devices in parallel
       await Promise.all(devices.map(async (device: string) => {
         try {
-          // Call API to get data from device in real time
           const response = await axios.get<SensorData>(`http://localhost:5000/api/sensor/realtime/${device}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
-          // Get data
           const newData = response.data;
-          // Update device history
           setDeviceHistories(prevHistories => {
-              // Add new data to history
             const updatedDeviceHistory = [...(prevHistories[device] || []), newData].slice(-MAX_HISTORY_ENTRIES);
-            // Update history in localStorage
             const updatedHistories = { ...prevHistories, [device]: updatedDeviceHistory };
-            localStorage.setItem('deviceHistories', JSON.stringify(updatedHistories)); 
-            // Return updated history
+            localStorage.setItem('deviceHistories', JSON.stringify(updatedHistories));
             return updatedHistories;
           });
         } catch (err: any) {
           console.error(`Error al obtener datos del dispositivo ${device}:`, err);
         }
       }));
-      // Update local history and data from selected device
       setDeviceHistories(prevHistories => {
         const updatedHistories = { ...prevHistories };
-        const latestData = updatedHistories[selectedDevice]?.[updatedHistories[selectedDevice].length - 1] || null;
-        setData(latestData);
-        setLocalHistory(updatedHistories[selectedDevice] || []);
+        const newData: Record<string, SensorData | null> = {};
+        devices.forEach((device: string) => {
+          newData[device] = updatedHistories[device]?.[updatedHistories[device].length - 1] || null;
+        });
+        setData(newData);
         return updatedHistories;
       });
-      // Update time remaining
       if (!isFirstLoad) {
         setShowUpdateNotification(true);
         setTimeout(() => setShowUpdateNotification(false), 5000);
       }
       setIsFirstLoad(false);
+      // Reiniciamos el tiempo de inicio para la cuenta regresiva
+      setStartTime(new Date());
+      setTimeRemaining(UPDATE_INTERVAL / 1000);
     } catch (err: any) {
       setError('Error al obtener datos en tiempo real: ' + (err.message || 'Desconocido'));
     } finally {
@@ -128,25 +97,6 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
     }
   };
 
-  // Function for change device
-  const changeDevice = async (newDevice: string) => {
-    // If new device is the same as selected device, return
-    if (!newDevice || newDevice === selectedDevice) return;
-    try {
-      setLoading(true);
-      setError(null);
-      setSelectedDevice(newDevice);
-      localStorage.setItem('selectedDevice', newDevice);
-      setLocalHistory([]);
-      await fetchData();
-    } catch (err: any) {
-      setError('Error al cambiar de dispositivo: ' + (err.message || 'Desconocido'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // UseEffect for fetch available devices and data
   useEffect(() => {
     fetchAvailableDevices();
     fetchData();
@@ -154,28 +104,23 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
       fetchData();
     }, UPDATE_INTERVAL);
     return () => clearInterval(interval);
-  }, [selectedDevice, token, navigate, setToken]);
+  }, [token, navigate, setToken]);
 
-  // UseEffect for update time remaining
+  // Cuenta regresiva
   useEffect(() => {
     const timer = setInterval(() => {
       const now = new Date();
       const timeElapsed = now.getTime() - startTime.getTime();
-      const remainingMs = Math.max(UPDATE_INTERVAL - timeElapsed, 0);
-      setTimeRemaining(remainingMs);
+      const remainingSeconds = Math.max(Math.floor((UPDATE_INTERVAL - timeElapsed) / 1000), 0);
+      setTimeRemaining(remainingSeconds);
     }, 1000);
     return () => clearInterval(timer);
   }, [startTime]);
 
   const getTimeSinceLastUpdate = () => {
-    const now = new Date();
-    const timeElapsed = now.getTime() - startTime.getTime();
-    const diffSeconds = Math.floor(timeElapsed / 1000);
-    if (diffSeconds < 1) return 'Actualizado hace menos de un segundo';
-    return `Actualizado hace ${diffSeconds} segundo${diffSeconds === 1 ? '' : 's'}`;
+    return `Próxima actualización en ${timeRemaining} segundo${timeRemaining === 1 ? '' : 's'}`;
   };
 
-  // Function to predict the next value using linear extrapolation
   const predictNextValue = (history: SensorData[], dataKey: string): number => {
     if (history.length < 2) {
       return history.length > 0 ? history[history.length - 1][dataKey as keyof SensorData] as number : 0;
@@ -190,13 +135,11 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
     return predicted;
   };
 
-  const updateHistoryChartData = (dataKey: string) => {
-    if (localHistory.length > 0) {
-      // Labels for the X-axis (timestamps)
-      const labels = localHistory.map((entry) => new Date(entry.ts).toLocaleTimeString('es-ES'));
-
-      // Historical data
-      const historicalData = localHistory.map((item) => {
+  const updateHistoryChartData = (dataKey: string, device: string) => {
+    const deviceHistory = deviceHistories[device] || [];
+    if (deviceHistory.length > 0) {
+      const labels = deviceHistory.map((entry) => new Date(entry.ts).toLocaleTimeString('es-ES'));
+      const historicalData = deviceHistory.map((item) => {
         let value: number;
         if (dataKey === 'airQuality') {
           value = Math.min(
@@ -215,12 +158,10 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
         return value;
       });
 
-      // Predict the next value
-      const predictedValue = predictNextValue(localHistory, dataKey);
+      const predictedValue = predictNextValue(deviceHistory, dataKey);
       const allLabels = [...labels, 'Predicción'];
 
-      // Log para depurar los datos
-      console.log(`Datos históricos para ${dataKey}:`, historicalData);
+      console.log(`Datos históricos para ${dataKey} (dispositivo ${device}):`, historicalData);
       console.log(`Valor predicho para ${dataKey}:`, predictedValue);
       console.log(`Etiquetas (labels):`, allLabels);
 
@@ -235,12 +176,12 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
               data: historicalData,
               borderColor: 'rgba(75, 192, 192, 1)',
               backgroundColor: 'rgba(75, 192, 192, 0.2)',
-              borderWidth: 1, // Líneas más delgadas
+              borderWidth: 1,
               tension: 0.3,
               fill: false,
               pointBackgroundColor: 'rgba(75, 192, 192, 1)',
-              pointRadius: 3, // Puntos más pequeños
-              pointHoverRadius: 5, // Puntos más pequeños al hacer hover
+              pointRadius: 3,
+              pointHoverRadius: 5,
             },
             {
               label: 'Predicción',
@@ -249,9 +190,9 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
               backgroundColor: 'rgba(255, 99, 132, 1)',
               pointBackgroundColor: 'rgba(255, 99, 132, 1)',
               pointBorderColor: 'rgba(255, 99, 132, 1)',
-              pointRadius: 5, // Punto de predicción más pequeño
-              pointHoverRadius: 7, // Punto de predicción más pequeño al hacer hover
-              showLine: false, // No conectar el punto predicho con una línea
+              pointRadius: 5,
+              pointHoverRadius: 7,
+              showLine: false,
             },
           ],
         };
@@ -264,12 +205,12 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
               data: historicalData,
               borderColor: getColor(dataKey),
               backgroundColor: getColor(dataKey, 0.2),
-              borderWidth: 1, // Líneas más delgadas
+              borderWidth: 1,
               tension: 0.3,
               fill: false,
               pointBackgroundColor: getColor(dataKey),
-              pointRadius: 3, // Puntos más pequeños
-              pointHoverRadius: 5, // Puntos más pequeños al hacer hover
+              pointRadius: 3,
+              pointHoverRadius: 5,
             },
             {
               label: 'Predicción',
@@ -278,9 +219,9 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
               backgroundColor: 'rgba(255, 99, 132, 1)',
               pointBackgroundColor: 'rgba(255, 99, 132, 1)',
               pointBorderColor: 'rgba(255, 99, 132, 1)',
-              pointRadius: 5, // Punto de predicción más pequeño
-              pointHoverRadius: 7, // Punto de predicción más pequeño al hacer hover
-              showLine: false, // No conectar el punto predicho con una línea
+              pointRadius: 5,
+              pointHoverRadius: 7,
+              showLine: false,
             },
           ],
         };
@@ -293,17 +234,23 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
   };
 
   const updateSummaryBarChartData = () => {
-    if (data) {
+    if (Object.keys(data).length > 0) {
+      const devicesWithData = Object.values(data).filter(d => d !== null) as SensorData[];
+      if (devicesWithData.length === 0) return { labels: [], datasets: [] };
+      const avgTemp = devicesWithData.reduce((sum, d) => sum + d.temp, 0) / devicesWithData.length;
+      const avgHumidity = devicesWithData.reduce((sum, d) => sum + d.humidity, 0) / devicesWithData.length;
+      const avgCO = devicesWithData.reduce((sum, d) => sum + d.co, 0) / devicesWithData.length;
+      const avgLPG = devicesWithData.reduce((sum, d) => sum + d.lpg, 0) / devicesWithData.length;
       return {
         labels: ['Temp', 'Humedad', 'CO', 'LPG'],
         datasets: [
           {
-            label: 'Valores Normalizados',
+            label: 'Valores Normalizados (Promedio)',
             data: [
-              data.temp / 50,
-              data.humidity / 100,
-              data.co * 10000,
-              data.lpg * 10000,
+              avgTemp / 50,
+              avgHumidity / 100,
+              avgCO * 10000,
+              avgLPG * 10000,
             ],
             backgroundColor: [
               'rgba(75, 192, 192, 0.6)',
@@ -326,19 +273,23 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
   };
 
   const updateAirQualityChartData = () => {
-    if (data) {
-      const airQuality = Math.min(
-        100,
-        Math.max(
-          0,
-          100 - ((data.co * 10000 + data.lpg * 10000 + (data.smoke ? 50 : 0)) / 100)
-        )
-      );
+    if (Object.keys(data).length > 0) {
+      const devicesWithData = Object.values(data).filter(d => d !== null) as SensorData[];
+      if (devicesWithData.length === 0) return { labels: [], datasets: [] };
+      const avgAirQuality = devicesWithData.reduce((sum, d) => {
+        return sum + Math.min(
+          100,
+          Math.max(
+            0,
+            100 - ((d.co * 10000 + d.lpg * 10000 + (d.smoke ? 50 : 0)) / 100)
+          )
+        );
+      }, 0) / devicesWithData.length;
       return {
-        labels: ['Calidad del Aire', 'Resto'],
+        labels: ['Calidad del Aire (Promedio)', 'Resto'],
         datasets: [
           {
-            data: [airQuality, 100 - airQuality],
+            data: [avgAirQuality, 100 - avgAirQuality],
             backgroundColor: ['rgba(75, 192, 192, 0.6)', 'rgba(255, 99, 132, 0.2)'],
             borderColor: ['rgb(75, 192, 192)', 'rgb(255, 99, 132)'],
             borderWidth: 1,
@@ -363,19 +314,16 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
   };
 
   const handleLogout = async (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation(); // Detener la propagación del evento
-    e.preventDefault(); // Prevenir cualquier comportamiento por defecto
+    e.stopPropagation();
+    e.preventDefault();
     console.log('Clic en Cerrar Sesión detectado');
     try {
       console.log('Iniciando cierre de sesión...');
-      // Limpiar el token del estado
       setToken(null);
-      // Limpiar el token del almacenamiento local (si se está usando)
       localStorage.removeItem('token');
-      sessionStorage.removeItem('token'); // También limpiamos sessionStorage por si acaso
+      sessionStorage.removeItem('token');
       console.log('Token limpiado del estado y almacenamiento local');
-      // Redirigir al login
-      navigate('/login', { replace: true });
+      navigate('/HomePage', { replace: true });
       console.log('Redirigiendo a /login');
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
@@ -384,12 +332,11 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
 
   return (
     <div className="min-h-screen bg-gray-900 p-6 relative">
-      {/* Header fijo */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-gray-900 px-6 py-4 shadow-lg">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-white">Tablero de Control</h1>
+          <h1 className="text-3xl font-bold text-black">Tablero de Control</h1>
           <div className="flex items-center space-x-4">
-            <div className="text-sm text-gray-400">Última actualización: {getTimeSinceLastUpdate()}</div>
+            <div className="text-sm text-gray-400">{getTimeSinceLastUpdate()}</div>
             <button
               onClick={(e) => {
                 console.log('Evento onClick disparado en el botón Cerrar Sesión');
@@ -403,7 +350,6 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
         </div>
       </div>
 
-      {/* Contenedor principal con padding superior para evitar que el contenido quede debajo del header */}
       <div className="pt-20 w-full">
         {error && (
           <div className="text-lg font-semibold text-red-500 mb-4">{error}</div>
@@ -411,10 +357,8 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
 
         <DashboardForm
           availableDevices={availableDevices}
-          selectedDevice={selectedDevice}
-          changeDevice={changeDevice}
           data={data}
-          history={localHistory} // Pasamos el historial local
+          deviceHistories={deviceHistories}
           showHistory={showHistory}
           setShowHistory={setShowHistory}
           updateHistoryChartData={updateHistoryChartData}

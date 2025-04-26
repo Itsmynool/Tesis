@@ -22,34 +22,34 @@ const HomePage = () => {
 
   return (
     <div
-      className="relative min-h-screen flex flex-col justify-center items-center overflow-hidden bg-gradient-to-br from-white to-blue-500"
+      className="relative min-h-screen flex flex-col justify-start items-center overflow-hidden bg-gradient-to-br from-white to-blue-500"
       style={{
-        background: 'linear-gradient(to bottom right, #ffffff, #3b82f6)', // Fallback if Tailwind fails
+        background: 'linear-gradient(to bottom right, #ffffff, #3b82f6)', // Fallback por si Tailwind falla
       }}
     >
       {/* Contenido principal */}
       <motion.main
-        className="flex flex-col items-center justify-center text-center px-6 sm:px-8 lg:px-10 z-10"
+        className="flex flex-col items-center justify-start text-center px-6 sm:px-8 lg:px-10 z-10 mt-20"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
         <motion.h1
-          className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-gray-900 mb-4 tracking-tight leading-tight shadow-md"
+          className="text-5xl sm:text-6xl md:text-7xl font-extrabold text-gray-900 mb-6 tracking-tight leading-tight shadow-md font-sans"
           variants={itemVariants}
         >
           Monitoreo Inteligente
         </motion.h1>
 
         <motion.h2
-          className="text-2xl sm:text-3xl md:text-4xl font-semibold text-indigo-600 mb-6 leading-snug"
+          className="text-3xl sm:text-4xl md:text-5xl font-semibold text-indigo-600 mb-8 leading-snug font-sans"
           variants={itemVariants}
         >
           Para un Entorno Saludable
         </motion.h2>
 
         <motion.p
-          className="text-base sm:text-lg md:text-xl text-gray-700 mb-8 max-w-2xl font-light leading-relaxed"
+          className="text-lg sm:text-xl md:text-2xl text-gray-700 mb-12 max-w-3xl font-light leading-relaxed font-sans"
           variants={itemVariants}
         >
           Monitorea en tiempo real la calidad del aire, temperatura, humedad y más. 
@@ -57,29 +57,24 @@ const HomePage = () => {
         </motion.p>
 
         <motion.div
-          className="flex flex-col sm:flex-row gap-4 mb-12"
+          className="flex flex-row gap-6"
           variants={itemVariants}
         >
           <Link
             to="/login"
-            className="px-8 py-4 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-semibold shadow-lg hover:scale-105 transform transition duration-300"
+            className="px-10 py-5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold text-lg shadow-xl hover:shadow-2xl hover:-translate-y-1 transform transition duration-300"
           >
             Iniciar Sesión
           </Link>
 
           <Link
             to="/signup"
-            className="px-8 py-4 rounded-lg bg-white text-blue-500 font-semibold shadow-lg hover:bg-gray-200 hover:scale-105 transform transition duration-300"
+            className="px-10 py-5 rounded-xl bg-white text-blue-500 font-semibold text-lg shadow-xl hover:bg-gray-100 hover:shadow-2xl hover:-translate-y-1 transform transition duration-300 border border-blue-200"
           >
             Registrarse
           </Link>
         </motion.div>
       </motion.main>
-
-      {/* Footer fijo */}
-      <footer className="fixed bottom-0 w-full text-center py-4 bg-white/80 backdrop-blur-sm text-gray-700 text-sm z-20">
-        © {new Date().getFullYear()} Plataforma de Monitoreo Inteligente. Todos los derechos reservados.
-      </footer>
     </div>
   );
 };

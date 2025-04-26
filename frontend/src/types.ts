@@ -1,4 +1,3 @@
-
 export interface AuthProps {
   setToken: (token: string) => void;
 }
@@ -22,16 +21,13 @@ export interface SensorData {
   temp: number;
 }
 
-
 export interface DashboardFormProps {
   availableDevices: string[];
-  selectedDevice: string;
-  changeDevice: (newDevice: string) => void;
-  data: SensorData | null;
-  history: SensorData[];
-  showHistory: string | null;
-  setShowHistory: (key: string | null) => void;
-  updateHistoryChartData: (dataKey: string) => { labels: string[]; datasets: any[] };
+  data: Record<string, SensorData | null>;
+  deviceHistories: Record<string, SensorData[]>;
+  showHistory: { device: string; dataType: string } | null;
+  setShowHistory: (value: { device: string; dataType: string } | null) => void;
+  updateHistoryChartData: (dataKey: string, device: string) => { labels: string[]; datasets: any[] };
   updateSummaryBarChartData: () => { labels: string[]; datasets: any[] };
   updateAirQualityChartData: () => { labels: string[]; datasets: any[] };
   getColor: (dataKey: string, opacity?: number) => string;

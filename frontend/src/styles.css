@@ -575,5 +575,52 @@ path {
   }
 }
 
+/* Estilos para las tarjetas de datos */
+.card-container {
+  width: 100%;
+  height: 400px; /* Altura fija para todas las tarjetas */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  box-sizing: border-box;
+  overflow: hidden; /* Evita que el contenido se desborde */
+  z-index: 10; /* z-index bajo para las tarjetas */
+}
+
+/* Aseguramos que los títulos dentro de las tarjetas no se corten */
+.card-title {
+  font-size: 0.875rem; /* Equivalente a text-sm */
+  font-weight: 600; /* Equivalente a font-semibold */
+  color: #2D2D2D; /* Equivalente a text-gray-800 */
+  text-align: center;
+  white-space: normal; /* Permite que el texto se envuelva */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Aseguramos que el contenido interno de las tarjetas esté bien distribuido */
+.card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+/* Aseguramos que el contenedor de dropdowns tenga un z-index alto */
+.dropdown-container {
+  position: relative;
+  z-index: 100; /* z-index alto para el contenedor de dropdowns */
+}
+
+/* Aseguramos que el contenido del dropdown tenga un z-index aún más alto */
+.dropdown-content {
+  z-index: 150; /* z-index muy alto para el contenido del dropdown */
+}
+
 /* Importar fuente Inter UI (opcional, si quieres usarla) */
 @import url('https://rsms.me/inter/inter-ui.css');
