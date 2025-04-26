@@ -4,59 +4,10 @@ import { SensorData, DashboardFormProps } from '../types';
 import TemperatureGauge from './TemperatureGauge';
 import HumidityGauge from './HumidityGauge';
 import AirQualityGauge from './AirQualityGauge';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
 import LightIndicator from './LightIndicator';
 import COGauge from './COGauge';
 import LPGGauge from './LPGGauge';
 import SmokeIndicator from './SmokeIndicator';
-
-// Estilo personalizado para el DatePicker
-const datePickerStyles = `
-  .react-datepicker {
-    background-color: #2d3748;
-    border: 1px solid #4a5568;
-    border-radius: 0.5rem;
-    font-family: Arial, sans-serif;
-  }
-  .react-datepicker__header {
-    background-color: #4a5568;
-    border-bottom: none;
-    padding: 0.5rem;
-  }
-  .react-datepicker__current-month,
-  .react-datepicker__day-name {
-    color: #ffffff;
-  }
-  .react-datepicker__day {
-    color: #e2e8f0;
-    border-radius: 0.25rem;
-  }
-  .react-datepicker__day:hover {
-    background-color: #5a67d8;
-    color: #ffffff;
-  }
-  .react-datepicker__day--selected,
-  .react-datepicker__day--keyboard-selected {
-    background-color: #5a67d8;
-    color: #ffffff;
-  }
-  .react-datepicker__day--outside-month {
-    color: #718096;
-  }
-  .react-datepicker__navigation {
-    top: 0.5rem;
-  }
-  .react-datepicker__navigation--previous {
-    border-right-color: #e2e8f0;
-  }
-  .react-datepicker__navigation--next {
-    border-left-color: #e2e8f0;
-  }
-  .react-datepicker__triangle {
-    display: none;
-  }
-`;
 
 // Estilo para los dropdowns y botones
 const dropdownStyles = `
@@ -121,9 +72,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
     return acc;
   }, {} as Record<string, number>);
 
-  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
-  const [startHour, setStartHour] = useState<number>(0);
-  const [endHour, setEndHour] = useState<number>(23);
   const [filteredData, setFilteredData] = useState<SensorData[]>([]);
   const [isHistoryExpanded, setIsHistoryExpanded] = useState<boolean>(false);
   const [isDeviceDropdownOpen, setIsDeviceDropdownOpen] = useState<boolean>(false);
@@ -353,54 +301,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
-
-  const getAvailableDateRange = () => {
-    if (filteredData.length === 0) return { minDate: undefined, maxDate: undefined };
-    const dates = filteredData.map((entry) => new Date(entry.ts).getTime());
-    const minTimestamp = Math.min(...dates);
-    const maxTimestamp = Math.max(...dates);
-    const minDate = new Date(minTimestamp);
-    const maxDate = new Date(maxTimestamp);
-    const result = {
-      minDate: isNaN(minDate.getTime()) ? undefined : minDate,
-      maxDate: isNaN(maxDate.getTime()) ? undefined : maxDate,
-    };
-    console.log('Rango de fechas disponible:', result);
-    return result;
-  };
-
-  const { minDate, maxDate } = getAvailableDateRange();
-
-  const hourOptions = Array.from({ length: 24 }, (_, i) => ({
-    value: i,
-    label: `${i.toString().padStart(2, '0')}:00`,
-  }));
-
-  const handleFilter = () => {
-    if (!selectedDay) {
-      const deviceHistory = showHistory ? deviceHistories[showHistory.device] || [] : [];
-      setFilteredData(deviceHistory);
-      console.log('Filtro aplicado (sin día seleccionado), datos:', deviceHistory);
-      return;
-    }
-
-    const filtered = filteredData.filter((entry: SensorData) => {
-      const entryDate = new Date(entry.ts);
-      const entryHour = entryDate.getHours();
-
-      const isSameDay =
-        entryDate.getFullYear() === selectedDay.getFullYear() &&
-        entryDate.getMonth() === selectedDay.getMonth() &&
-        entryDate.getDate() === selectedDay.getDate();
-
-      const isWithinHourRange = entryHour >= startHour && entryHour <= endHour;
-
-      return isSameDay && isWithinHourRange;
-    });
-
-    setFilteredData(filtered);
-    console.log('Filtro aplicado, datos filtrados:', filtered);
-  };
 
   const filteredHistoryChartData = (dataKey: string, device: string) => {
     const deviceHistory = deviceHistories[device] || [];
@@ -781,7 +681,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
 
   return (
     <div className="space-y-6 w-full bg-gradient-to-br from-gray-900 via-indigo-900 to-purple-800 min-h-screen p-4">
-      <style>{datePickerStyles}</style>
       <style>{dropdownStyles}</style>
 
       {/* Sección de botones alineados uno al lado del otro */}
@@ -1102,54 +1001,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
               ({showHistory.device})
             </h2>
             <div className="flex space-x-4 items-center">
-              <div className="flex space-x-2 items-center">
-                <div>
-                  <DatePicker
-                    selected={selectedDay}
-                    onChange={(date: Date | null) => setSelectedDay(date)}
-                    minDate={minDate}
-                    maxDate={maxDate}
-                    placeholderText="Selecciona un día"
-                    className="p-2 bg-gray-700 text-gray-800 border border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    dateFormat="dd/MM/yyyy"
-                    disabled
-                  />
-                </div>
-                <div className="flex space-x-2">
-                  <select
-                    value={startHour}
-                    onChange={(e) => setStartHour(Number(e.target.value))}
-                    className="p-2 bg-gray-700 text-gray-800 border border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    disabled
-                  >
-                    {hourOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="text-gray-800">-</span>
-                  <select
-                    value={endHour}
-                    onChange={(e) => setEndHour(Number(e.target.value))}
-                    className="p-2 bg-gray-700 text-gray-800 border border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    disabled
-                  >
-                    {hourOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <button
-                  onClick={handleFilter}
-                  className="px-4 py-2 bg-indigo-600 text-gray-800 rounded-lg hover:bg-indigo-700 transition duration-300 opacity-50 cursor-not-allowed"
-                  disabled
-                >
-                  Filtrar
-                </button>
-              </div>
               <button
                 onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
                 className="text-indigo-400 text-sm hover:text-indigo-300 transition duration-300"
