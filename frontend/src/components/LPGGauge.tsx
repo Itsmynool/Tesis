@@ -93,7 +93,7 @@ const LPGGauge: React.FC<LPGGaugeProps> = ({ lpg, maxValue = 0.01 }) => {
       <canvas ref={canvasRef} className="w-full h-full" />
       <div className="absolute inset-0 flex items-center justify-center text-center pointer-events-none">
         <div>
-          <div className="text-lg font-bold text-white">
+          <div className="text-lg font-bold text-black">
             {lpg !== null && lpg !== undefined ? lpg.toFixed(6) : 'N/A'} PPM
           </div>
         </div>

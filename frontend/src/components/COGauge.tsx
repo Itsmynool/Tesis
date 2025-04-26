@@ -83,7 +83,7 @@ const COGauge: React.FC<COGaugeProps> = ({ co, maxValue = 0.01 }) => {
         </div>
         <div className="absolute inset-0 flex items-center justify-center text-center pointer-events-none">
           <div>
-            <div className="text-lg font-bold text-white">
+            <div className="text-lg font-bold text-black">
               {clampedCO.toFixed(6)} PPM
             </div>
           </div>

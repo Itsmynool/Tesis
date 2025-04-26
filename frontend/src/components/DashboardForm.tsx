@@ -333,11 +333,11 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
         <div className="flex items-start space-x-8">
           {/* Selector de Dispositivos */}
           <div className="flex-1 flex flex-col">
-            <h2 className="text-lg font-semibold text-white mb-2">Cambiar Ubicación</h2>
+            <h2 className="text-lg font-semibold text-black mb-2">Cambiar Ubicación</h2>
             <select
               value={selectedDevice || ''}
               onChange={(e) => changeDevice(e.target.value)}
-              className="w-full max-w-xs p-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full max-w-xs p-2 bg-gray-700 text-black border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="" disabled>
                 Selecciona un dispositivo
@@ -352,10 +352,10 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
 
           {/* Lista de Checkboxes */}
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-white mb-2">Mostrar Datos:</h3>
+            <h3 className="text-lg font-semibold text-black mb-2">Mostrar Datos:</h3>
             <div className="grid grid-cols-2 gap-2">
               {Object.keys(cardVisibility).map((card) => (
-                <label key={card} className="flex items-center space-x-2 text-white">
+                <label key={card} className="flex items-center space-x-2 text-black">
                   <input
                     type="checkbox"
                     checked={cardVisibility[card as keyof typeof cardVisibility]}
@@ -383,12 +383,12 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
         {/* Temperatura */}
         {cardVisibility.temperature && (
           <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px]">
-            <h2 className="text-sm font-semibold text-white mb-1">Temperatura</h2>
+            <h2 className="text-sm font-semibold text-black mb-1">Temperatura</h2>
             <div className="flex items-center space-x-4">
               <div style={{ width: '60px', height: '120px' }}>
                 <TemperatureGauge temperature={data?.temp || 0} />
               </div>
-              <div className="text-xl font-bold text-white">
+              <div className="text-xl font-bold text-black">
                 {data?.temp ? `${data.temp.toFixed(2)}°C` : 'N/A'}
               </div>
             </div>
@@ -406,7 +406,7 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
         {/* Humedad */}
         {cardVisibility.humidity && (
           <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px] relative">
-            <h2 className="text-sm font-semibold text-white mb-2">Humedad</h2>
+            <h2 className="text-sm font-semibold text-black mb-2">Humedad</h2>
             <div className="relative">
               <HumidityGauge humidity={data?.humidity || 0} />
             </div>
@@ -424,7 +424,7 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
         {/* Calidad del Aire */}
         {cardVisibility.airQuality && (
           <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px] relative">
-            <h2 className="text-sm font-semibold text-white mb-2">Calidad del Aire</h2>
+            <h2 className="text-sm font-semibold text-black mb-2">Calidad del Aire</h2>
             <div className="relative">
               <AirQualityGauge airQuality={airQuality} />
             </div>
@@ -442,10 +442,10 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
         {/* Estado de la Luz */}
         {cardVisibility.light && (
           <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px] relative">
-            <h2 className="text-sm font-semibold text-white mb-2 text-center">Estado de la Luz</h2>
+            <h2 className="text-sm font-semibold text-black mb-2 text-center">Estado de la Luz</h2>
             <div className="flex flex-col items-center justify-center">
               <LightIndicator isOn={data?.light ?? false} />
-              <div className="text-lg font-bold text-white mt-2">
+              <div className="text-lg font-bold text-black mt-2">
                 {data?.light ? 'Encendido' : 'Apagado'}
               </div>
             </div>
@@ -463,7 +463,7 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
         {/* CO */}
         {cardVisibility.co && (
           <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px]">
-            <h2 className="text-sm font-semibold text-white mb-2">CO</h2>
+            <h2 className="text-sm font-semibold text-black mb-2">CO</h2>
             <COGauge co={data?.co} /> {/* maxValue por defecto es 0.01 */}
             <div className="text-center mt-1">
               <button
@@ -479,7 +479,7 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
         {/* LPG */}
         {cardVisibility.lpg && (
           <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px]">
-            <h2 className="text-sm font-semibold text-white mb-2">LPG (Gas liquado de petroleo)</h2>
+            <h2 className="text-sm font-semibold text-black mb-2">LPG (Gas liquado de petroleo)</h2>
             <LPGGauge lpg={data?.lpg} /> {/* maxValue por defecto es 0.01 */}
             <div className="text-center mt-1">
               <button
@@ -495,7 +495,7 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
         {/* Movimiento */}
         {cardVisibility.motion && (
           <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px]">
-            <h3 className="text-sm font-semibold text-white mb-2">Movimiento</h3>
+            <h3 className="text-sm font-semibold text-black mb-2">Movimiento</h3>
             <div className="flex flex-col items-center justify-center">
               {/* Imagen dinámica según estado de `motion` */}
               <img
@@ -503,7 +503,7 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                 alt="Estado de movimiento"
                 className="w-8 h-8" // Reducido de w-16 h-16 a w-12 h-12 (48x48px)
               />
-              <div className="text-xl font-bold text-white mt-2">{data?.motion ? "Sí" : "No"}</div>
+              <div className="text-xl font-bold text-black mt-2">{data?.motion ? "Sí" : "No"}</div>
             </div>
             <div className="text-center mt-1">
               <button
@@ -519,7 +519,7 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
         {/* Humo */}
         {cardVisibility.smoke && (
           <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md flex flex-col items-center justify-between min-h-[200px]">
-            <h3 className="text-sm font-semibold text-white mb-2">Humo</h3>
+            <h3 className="text-sm font-semibold text-black mb-2">Humo</h3>
             <div className="flex flex-col items-center justify-center">
               {/* Indicador de humo como elemento visual */}
               <div className="w-16 h-16">
@@ -527,7 +527,7 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
               </div>
             </div>
             <div className="text-center mt-1">
-              <div className="text-xl font-bold text-white mt-2">
+              <div className="text-xl font-bold text-black mt-2">
                 {data?.smoke !== undefined && data?.smoke !== null ? data.smoke.toFixed(6) : 'N/A'} PPM
               </div>
               <button
@@ -545,7 +545,7 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
       {showHistory && (
         <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-lg font-semibold text-black">
               Historial de {showHistory === 'airQuality' ? 'Calidad del Aire' : showHistory.charAt(0).toUpperCase() + showHistory.slice(1)}
             </h2>
             <div className="flex space-x-4 items-center">
@@ -557,7 +557,7 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                     minDate={minDate}
                     maxDate={maxDate}
                     placeholderText="Selecciona un día"
-                    className="p-2 bg-gray-700 text-white border border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="p-2 bg-gray-700 text-black border border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     dateFormat="dd/MM/yyyy"
                     disabled // Inhabilitado
                   />
@@ -566,7 +566,7 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                   <select
                     value={startHour}
                     onChange={(e) => setStartHour(Number(e.target.value))}
-                    className="p-2 bg-gray-700 text-white border border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="p-2 bg-gray-700 text-black border border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     disabled // Inhabilitado
                   >
                     {hourOptions.map((option) => (
@@ -575,11 +575,11 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                       </option>
                     ))}
                   </select>
-                  <span className="text-white">-</span>
+                  <span className="text-black">-</span>
                   <select
                     value={endHour}
                     onChange={(e) => setEndHour(Number(e.target.value))}
-                    className="p-2 bg-gray-700 text-white border border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="p-2 bg-gray-700 text-black border border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     disabled // Inhabilitado
                   >
                     {hourOptions.map((option) => (
@@ -591,7 +591,7 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                 </div>
                 <button
                   onClick={handleFilter}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition duration-300 opacity-50 cursor-not-allowed"
+                  className="px-4 py-2 bg-indigo-600 text-black rounded-lg hover:bg-indigo-700 transition duration-300 opacity-50 cursor-not-allowed"
                   disabled // Inhabilitado
                 >
                   Filtrar
@@ -617,7 +617,7 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                   responsive: true,
                   maintainAspectRatio: false,
                   plugins: {
-                    legend: { display: true, position: 'top', labels: { color: 'white' } },
+                    legend: { display: true, position: 'top', labels: { color: 'black' } },
                     title: { display: false },
                     tooltip: {
                       callbacks: {
@@ -665,11 +665,11 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                       title: {
                         display: true,
                         text: 'Tiempo', // Título "Tiempo"
-                        color: 'white',
+                        color: 'black',
                       },
                       ticks: {
                         display: true, // Mostrar etiquetas del eje X
-                        color: 'white',
+                        color: 'black',
                         callback: (value, index) => {
                           // Mostrar solo la última etiqueta como "Predicción" si es el punto predicho
                           if (index === filteredData.length) {
@@ -707,10 +707,10 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                             : showHistory === 'motion'
                             ? 'Movimiento'
                             : '',
-                        color: 'white',
+                        color: 'black',
                       },
                       ticks: {
-                        color: 'white',
+                        color: 'black',
                         maxTicksLimit: 10, // Permitir hasta 10 etiquetas para más detalle
                         stepSize: axisRange.stepSize, // Usar el stepSize calculado dinámicamente
                         callback: (value) => {

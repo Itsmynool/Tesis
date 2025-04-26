@@ -2,8 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
-const HomePage: React.FC = () => {
-  // Animations with Framer Motion
+const HomePage = () => {
   const containerVariants = {
     hidden: { opacity: 0, y: 50 },
     visible: {
@@ -22,60 +21,63 @@ const HomePage: React.FC = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-gray-800 via-blue-900 to-teal-900 flex flex-col items-center justify-center p-8 overflow-hidden">
-      {/* Enhanced Background Decorative Elements */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(45,212,191,0.15)_0%,_transparent_70%)] pointer-events-none"></div>
-      <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/dark-mosaic.png')] pointer-events-none"></div>
-
-      {/* Main Container */}
-      <motion.div
-        className="text-center max-w-4xl mx-auto z-10"
+    <div
+      className="relative min-h-screen flex flex-col justify-center items-center overflow-hidden bg-gradient-to-br from-white to-blue-500"
+      style={{
+        background: 'linear-gradient(to bottom right, #ffffff, #3b82f6)', // Fallback if Tailwind fails
+      }}
+    >
+      {/* Contenido principal */}
+      <motion.main
+        className="flex flex-col items-center justify-center text-center px-6 sm:px-8 lg:px-10 z-10"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
-        {/* Enhanced Title */}
         <motion.h1
-          className="text-5xl sm:text-6xl md:text-7xl font-bold text-white mb-6 leading-tight tracking-wide drop-shadow-lg"
+          className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-gray-900 mb-4 tracking-tight leading-tight shadow-md"
           variants={itemVariants}
         >
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-blue-500">
-            Monitoreo Inteligente
-          </span>
-          <br />
-          Para un Entorno Saludable
+          Monitoreo Inteligente
         </motion.h1>
 
-        {/* Enhanced Subtitle */}
-        <motion.p
-          className="text-lg sm:text-xl md:text-2xl text-gray-100 mb-12 leading-relaxed max-w-3xl mx-auto font-light"
+        <motion.h2
+          className="text-2xl sm:text-3xl md:text-4xl font-semibold text-indigo-600 mb-6 leading-snug"
           variants={itemVariants}
         >
-          Monitorea en tiempo real la calidad del aire, temperatura, humedad y más. Toma el control de tu entorno con nuestra plataforma avanzada y mantén tu espacio seguro.
+          Para un Entorno Saludable
+        </motion.h2>
+
+        <motion.p
+          className="text-base sm:text-lg md:text-xl text-gray-700 mb-8 max-w-2xl font-light leading-relaxed"
+          variants={itemVariants}
+        >
+          Monitorea en tiempo real la calidad del aire, temperatura, humedad y más. 
+          Toma el control de tu entorno con nuestra plataforma avanzada y mantén tu espacio seguro.
         </motion.p>
 
-        {/* Enhanced Action Buttons */}
         <motion.div
-          className="flex flex-col sm:flex-row justify-center gap-6"
+          className="flex flex-col sm:flex-row gap-4 mb-12"
           variants={itemVariants}
         >
           <Link
             to="/login"
-            className="relative bg-gradient-to-r from-teal-500 to-blue-600 text-white px-10 py-4 rounded-xl text-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+            className="px-8 py-4 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-semibold shadow-lg hover:scale-105 transform transition duration-300"
           >
             Iniciar Sesión
           </Link>
+
           <Link
             to="/signup"
-            className="relative bg-transparent border-2 border-teal-400 text-teal-300 px-10 py-4 rounded-xl text-lg font-semibold hover:bg-teal-500 hover:text-white hover:border-teal-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+            className="px-8 py-4 rounded-lg bg-white text-blue-500 font-semibold shadow-lg hover:bg-gray-200 hover:scale-105 transform transition duration-300"
           >
             Registrarse
           </Link>
         </motion.div>
-      </motion.div>
+      </motion.main>
 
-      {/* Enhanced Footer */}
-      <footer className="fixed bottom-0 w-full text-center py-4 text-gray-300 text-sm bg-gray-900/70 backdrop-blur-md border-t border-gray-700/50">
+      {/* Footer fijo */}
+      <footer className="fixed bottom-0 w-full text-center py-4 bg-white/80 backdrop-blur-sm text-gray-700 text-sm z-20">
         © {new Date().getFullYear()} Plataforma de Monitoreo Inteligente. Todos los derechos reservados.
       </footer>
     </div>

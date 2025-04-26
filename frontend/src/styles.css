@@ -15,31 +15,31 @@ body {
 }
 
 .bg-gray-900 {
-  background-color: #111827;
+  background-color: #F5F6FA; /* Fondo principal claro */
 }
 
 .bg-gray-800 {
-  background-color: #1f2937;
+  background-color: #EDEFF5; /* Fondo de las tarjetas */
 }
 
 .bg-gray-700 {
-  background-color: #374151;
+  background-color: #EDEFF5; /* Fondo de las tarjetas */
 }
 
 .bg-indigo-900 {
-  background-color: #4338ca;
+  background-color: #5E72E4;
 }
 
 .bg-purple-800 {
-  background-color: #6b21a8;
+  background-color: #5E72E4;
 }
 
 .bg-indigo-600 {
-  background-color: #4f46e5;
+  background-color: #5E72E4;
 }
 
 .bg-indigo-700 {
-  background-color: #4338ca;
+  background-color: #5E72E4;
 }
 
 .bg-white {
@@ -51,11 +51,23 @@ body {
 }
 
 .bg-red-500 {
-  background-color: #ef4444;
+  background-color: #F5365C; /* Botón "Cerrar Sesión" */
+}
+
+.bg-red-600 {
+  background-color: #D81E3F; /* Hover del botón "Cerrar Sesión" */
+}
+
+.bg-red-700 {
+  background-color: #D81E3F; /* Hover del botón "Cerrar Sesión" */
 }
 
 .bg-blue-500 {
-  background-color: #3b82f6;
+  background-color: #5E72E4; /* Azul para "Ver Historial" */
+}
+
+.bg-green-100 {
+  background-color: #d1fae5;
 }
 
 .bg-white\/10 {
@@ -67,25 +79,25 @@ body {
 }
 
 .from-gray-900 {
-  --tw-gradient-from: #111827;
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(17, 24, 39, 0));
+  --tw-gradient-from: #F5F6FA; /* Ajustado para que el header sea del mismo color que el fondo */
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(245, 246, 250, 0));
 }
 
 .via-indigo-900 {
-  --tw-gradient-stops: var(--tw-gradient-from), #4338ca, var(--tw-gradient-to, rgba(67, 56, 202, 0));
+  --tw-gradient-stops: var(--tw-gradient-from), #F5F6FA, var(--tw-gradient-to, rgba(245, 246, 250, 0));
 }
 
 .to-purple-800 {
-  --tw-gradient-to: #6b21a8;
+  --tw-gradient-to: #F5F6FA;
 }
 
 .from-gray-800 {
-  --tw-gradient-from: #1f2937;
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(31, 41, 55, 0));
+  --tw-gradient-from: #EDEFF5;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(237, 239, 245, 0));
 }
 
 .to-indigo-900 {
-  --tw-gradient-to: #4338ca;
+  --tw-gradient-to: #5E72E4;
 }
 
 .grid-cols-2 {
@@ -231,12 +243,16 @@ body {
   font-weight: 800;
 }
 
+.text-gray-900 {
+  color: #2D2D2D; /* Títulos y valores */
+}
+
 .text-gray-700 {
   color: #374151;
 }
 
 .text-gray-600 {
-  color: #4b5563;
+  color: #6B7280; /* Texto secundario */
 }
 
 .text-gray-400 {
@@ -248,7 +264,15 @@ body {
 }
 
 .text-red-500 {
-  color: #ef4444;
+  color: #F5365C;
+}
+
+.text-green-800 {
+  color: #065f46;
+}
+
+.text-gray-800 {
+  color: #2D2D2D;
 }
 
 .text-white {
@@ -264,11 +288,11 @@ body {
 }
 
 .text-indigo-500 {
-  color: #6366f1;
+  color: #5E72E4; /* "Ver Historial" */
 }
 
 .text-indigo-600 {
-  color: #4f46e5;
+  color: #5E72E4;
 }
 
 .text-pink-400 {
@@ -304,7 +328,7 @@ body {
 }
 
 .focus\:ring-indigo-500:focus {
-  --tw-ring-color: #6366f1;
+  --tw-ring-color: #5E72E4;
 }
 
 .w-full {
@@ -425,12 +449,20 @@ body {
   z-index: 20;
 }
 
+.z-50 {
+  z-index: 50;
+}
+
 .hover\:bg-indigo-700:hover {
-  background-color: #4338ca;
+  background-color: #5E72E4;
 }
 
 .hover\:bg-red-600:hover {
-  background-color: #dc2626;
+  background-color: #D81E3F;
+}
+
+.hover\:bg-red-700:hover {
+  background-color: #D81E3F;
 }
 
 .hover\:text-indigo-300:hover {
@@ -515,6 +547,7 @@ path {
     left: -2%;
   }
 }
+
 /* Añadir definiciones para las clases de grid que faltan */
 .grid-cols-1 {
   display: grid;
@@ -541,5 +574,6 @@ path {
     grid-template-columns: repeat(4, 1fr);
   }
 }
+
 /* Importar fuente Inter UI (opcional, si quieres usarla) */
 @import url('https://rsms.me/inter/inter-ui.css');
