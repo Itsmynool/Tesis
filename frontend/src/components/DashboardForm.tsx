@@ -169,10 +169,10 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
     }
   }, [availableDevices]);
 
-  // Generar predicciones para todos los dispositivos y tipos de datos
+  // Generar predicciones para los dispositivos y tipos de datos seleccionados
   useEffect(() => {
-    // Definir todos los tipos de datos posibles
-    const dataTypes = ['temp', 'humidity', 'airQuality', 'light', 'co', 'lpg', 'motion', 'smoke'];
+    // Definir los tipos de datos para los cuales se generarán predicciones (excluyendo light y motion)
+    const dataTypes = ['temp', 'humidity', 'airQuality', 'co', 'lpg', 'smoke'];
 
     // Recorrer todos los dispositivos
     availableDevices.forEach((device) => {
@@ -188,68 +188,118 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
         console.log(`filteredData actualizado para ${showHistory.device}:`, updatedData);
       }
 
-      // Generar predicciones para cada tipo de dato
+      // Generar predicciones para cada tipo de dato seleccionado
       dataTypes.forEach((dataKey) => {
         // Generar predicciones solo si hay al menos 2 datos
         if (updatedData.length >= 2) {
-          const predictedValue = predictNextValue(updatedData, dataKey);
-
-          // Intervalo fijo de 30 segundos
-          const intervalMs = 30000; // 30 segundos
-
-          // Tomar el timestamp del último dato y generar el timestamp de la predicción
-          const lastTimestamp = new Date(updatedData[updatedData.length - 1].ts).getTime();
-          const predictionTimestamp = new Date(lastTimestamp + intervalMs).toISOString();
-
-          // Actualizar el historial de predicciones
+          // Inicializar el historial de predicciones para este dispositivo y tipo de dato
           setPredictionsHistory(
             (prev: Record<string, Record<string, { timestamp: string; predictedValue: number; actualValue: number | null }[]>>) => {
               const devicePredictions = prev[device] || {};
               const dataTypePredictions = devicePredictions[dataKey] || [];
 
-              // Actualizar actualValue para predicciones pasadas
-              const updatedDataTypePredictions = dataTypePredictions.map((pred) => {
-                const predTime = new Date(pred.timestamp).getTime();
-                const matchingData = updatedData.find(
-                  (item) => Math.abs(new Date(item.ts).getTime() - predTime) < 1000 // Tolerancia de 1 segundo
-                );
-                if (matchingData) {
-                  let actualValue: number;
-                  if (dataKey === 'airQuality') {
-                    actualValue = Math.min(
-                      100,
-                      Math.max(
-                        0,
-                        100 - ((matchingData.co * 10000 + matchingData.lpg * 10000 + (matchingData.smoke ? 50 : 0)) / 100)
-                      )
-                    );
-                  } else {
-                    actualValue = matchingData[dataKey as keyof SensorData] as number;
-                    if (dataKey === 'light' || dataKey === 'motion') {
-                      actualValue = actualValue ? 1 : 0;
-                    }
-                  }
-                  return { ...pred, actualValue };
-                }
-                return pred;
-              });
+              // Generar predicciones para cada punto del historial (excepto el último)
+              const newPredictions: { timestamp: string; predictedValue: number; actualValue: number | null }[] = [];
+              for (let i = 0; i < updatedData.length - 1; i++) {
+                const currentData = updatedData[i];
+                const nextData = updatedData[i + 1];
+                const predictionTimestamp = nextData.ts; // La predicción se alinea con el siguiente dato histórico
 
-              // Mantener solo predicciones dentro del rango de los últimos 50 datos y la predicción futura
+                // Calcular el valor predicho
+                let predictedValue: number;
+                if (dataKey === 'airQuality') {
+                  const currentAirQuality = Math.min(
+                    100,
+                    Math.max(
+                      0,
+                      100 - ((currentData.co * 10000 + currentData.lpg * 10000 + (currentData.smoke ? 50 : 0)) / 100)
+                    )
+                  );
+                  const nextAirQuality = Math.min(
+                    100,
+                    Math.max(
+                      0,
+                      100 - ((nextData.co * 10000 + nextData.lpg * 10000 + (nextData.smoke ? 50 : 0)) / 100)
+                    )
+                  );
+                  const trend = nextAirQuality - currentAirQuality;
+                  predictedValue = currentAirQuality + trend;
+                } else {
+                  predictedValue = predictNextValue(updatedData.slice(0, i + 1), dataKey);
+                }
+
+                // Obtener el valor real para este timestamp
+                let actualValue: number | null = null;
+                if (dataKey === 'airQuality') {
+                  actualValue = Math.min(
+                    100,
+                    Math.max(
+                      0,
+                      100 - ((nextData.co * 10000 + nextData.lpg * 10000 + (nextData.smoke ? 50 : 0)) / 100)
+                    )
+                  );
+                } else {
+                  actualValue = nextData[dataKey as keyof SensorData] as number;
+                }
+
+                newPredictions.push({
+                  timestamp: predictionTimestamp,
+                  predictedValue: predictedValue,
+                  actualValue: actualValue,
+                });
+              }
+
+              // Generar una predicción futura para el último dato
+              if (updatedData.length >= 2) {
+                const lastTimestamp = new Date(updatedData[updatedData.length - 1].ts);
+                const predictionTimestamp = new Date(lastTimestamp.getTime() + 30 * 1000).toISOString();
+
+                let futurePredictedValue: number;
+                if (dataKey === 'airQuality') {
+                  const lastData = updatedData[updatedData.length - 1];
+                  const secondLastData = updatedData[updatedData.length - 2];
+                  const lastAirQuality = Math.min(
+                    100,
+                    Math.max(
+                      0,
+                      100 - ((lastData.co * 10000 + lastData.lpg * 10000 + (lastData.smoke ? 50 : 0)) / 100)
+                    )
+                  );
+                  const secondLastAirQuality = Math.min(
+                    100,
+                    Math.max(
+                      0,
+                      100 - ((secondLastData.co * 10000 + secondLastData.lpg * 10000 + (secondLastData.smoke ? 50 : 0)) / 100)
+                    )
+                  );
+                  const trend = lastAirQuality - secondLastAirQuality;
+                  futurePredictedValue = lastAirQuality + trend;
+                } else {
+                  futurePredictedValue = predictNextValue(updatedData, dataKey);
+                }
+
+                newPredictions.push({
+                  timestamp: predictionTimestamp,
+                  predictedValue: futurePredictedValue,
+                  actualValue: null,
+                });
+              }
+
+              // Mantener solo predicciones dentro del rango de los últimos 50 datos
               const earliestTimestamp = updatedData.length > 50
                 ? new Date(updatedData[updatedData.length - 50].ts).getTime()
                 : updatedData.length > 0
                 ? new Date(updatedData[0].ts).getTime()
                 : 0;
-              const filteredPredictions = updatedDataTypePredictions.filter(
+              let filteredPredictions = newPredictions.filter(
                 (pred) => new Date(pred.timestamp).getTime() >= earliestTimestamp
               );
 
-              // Añadir la nueva predicción (30 segundos adelante)
-              filteredPredictions.push({
-                timestamp: predictionTimestamp,
-                predictedValue: predictedValue,
-                actualValue: null,
-              });
+              // Evitar duplicados para el mismo timestamp
+              filteredPredictions = filteredPredictions.filter(
+                (pred, index, self) =>
+                  index === self.findIndex((p) => p.timestamp === pred.timestamp)
+              );
 
               return {
                 ...prev,
@@ -333,45 +383,60 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
     const devicePredictions = predictionsHistory[device] || {};
     const dataTypePredictions = devicePredictions[dataKey] || [];
 
-    // Crear un array de entradas para las predicciones
-    const predictionEntries = dataTypePredictions.map((pred) => ({
-      timestamp: pred.timestamp,
-      predictedValue: pred.predictedValue,
-      actualValue: pred.actualValue,
-    }));
+    // Separar predicciones históricas y la predicción futura
+    const historicalPredictions = dataTypePredictions.filter(
+      (pred) => pred.actualValue !== null
+    );
+    const futurePrediction = dataTypePredictions.length > 0
+      ? dataTypePredictions[dataTypePredictions.length - 1].actualValue === null
+        ? dataTypePredictions[dataTypePredictions.length - 1]
+        : null
+      : null;
 
-    // Combinar timestamps de datos históricos y predicciones, y ordenarlos
-    const allTimestamps = [
-      ...historicalEntries.map((entry) => entry.timestamp),
-      ...predictionEntries.map((entry) => entry.timestamp),
-    ];
-    const uniqueTimestamps = Array.from(new Set(allTimestamps)).sort(
+    // Crear un array de timestamps solo con los datos históricos
+    const historicalTimestamps = historicalEntries.map((entry) => entry.timestamp);
+    const uniqueTimestamps = Array.from(new Set(historicalTimestamps)).sort(
       (a, b) => new Date(a).getTime() - new Date(b).getTime()
     );
 
-    // Generar etiquetas (formato de hora)
-    const allLabels = uniqueTimestamps.map((ts) =>
-      new Date(ts).toLocaleTimeString('es-ES', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      })
+    // Añadir el timestamp de la predicción futura si existe y si el tipo de dato tiene predicciones
+    if (futurePrediction && ['temp', 'humidity', 'airQuality', 'co', 'lpg', 'smoke'].includes(dataKey)) {
+      uniqueTimestamps.push(futurePrediction.timestamp);
+    }
+
+    // Generar etiquetas (formato de hora), asegurando que el último punto sea "Predicción" si existe
+    const allLabels = uniqueTimestamps.map((ts, index) =>
+      index === uniqueTimestamps.length - 1 && futurePrediction && ['temp', 'humidity', 'airQuality', 'co', 'lpg', 'smoke'].includes(dataKey)
+        ? 'Predicción'
+        : new Date(ts).toLocaleTimeString('es-ES', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          })
     );
 
-    // Mapear datos históricos y predicciones a las posiciones correctas
+    // Mapear datos históricos a las posiciones correctas
     const historicalData = uniqueTimestamps.map((ts) => {
       const entry = historicalEntries.find((hist) => hist.timestamp === ts);
       return entry ? entry.value : null;
     });
 
-    const predictionData = uniqueTimestamps.map((ts) => {
-      const pred = predictionEntries.find((p) => p.timestamp === ts);
-      // Mostrar la predicción solo si es futura o si tiene un valor real asociado
-      if (pred && (pred.actualValue !== null || new Date(ts).getTime() > new Date(historicalEntries[historicalEntries.length - 1].timestamp).getTime())) {
-        return pred.predictedValue;
-      }
-      return null;
-    });
+    // Mapear datos de predicciones: incluir tanto las predicciones históricas como la futura (solo para los tipos de datos seleccionados)
+    let predictionData: (number | null)[] = [];
+    if (['temp', 'humidity', 'airQuality', 'co', 'lpg', 'smoke'].includes(dataKey)) {
+      predictionData = uniqueTimestamps.map((ts) => {
+        const historicalPred = historicalPredictions.find((pred) => pred.timestamp === ts);
+        if (historicalPred) {
+          return historicalPred.predictedValue;
+        }
+        if (futurePrediction && ts === futurePrediction.timestamp) {
+          return futurePrediction.predictedValue;
+        }
+        return null;
+      });
+    } else {
+      predictionData = uniqueTimestamps.map(() => null);
+    }
 
     let chartData;
 
@@ -445,6 +510,10 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                 ? '%'
                 : dataKey === 'co' || dataKey === 'lpg' || dataKey === 'smoke'
                 ? 'ppm'
+                : dataKey === 'light'
+                ? ''
+                : dataKey === 'motion'
+                ? ''
                 : ''
             })`,
             data: historicalData,
@@ -457,25 +526,29 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
             pointHoverRadius: 5,
             spanGaps: true,
           },
-          {
-            label: `Predicciones de ${dataKey.charAt(0).toUpperCase() + dataKey.slice(1)} (${
-              dataKey === 'temp'
-                ? '°C'
-                : dataKey === 'humidity'
-                ? '%'
-                : dataKey === 'co' || dataKey === 'lpg' || dataKey === 'smoke'
-                ? 'ppm'
-                : ''
-            })`,
-            data: predictionData,
-            borderColor: 'rgba(255, 99, 132, 1)',
-            backgroundColor: 'rgba(255, 99, 132, 0.2)',
-            borderWidth: 0,
-            pointBackgroundColor: 'rgba(255, 99, 132, 1)',
-            pointRadius: 5,
-            pointHoverRadius: 7,
-            showLine: false,
-          },
+          ...(dataKey === 'light' || dataKey === 'motion'
+            ? []
+            : [
+                {
+                  label: `Predicciones de ${dataKey.charAt(0).toUpperCase() + dataKey.slice(1)} (${
+                    dataKey === 'temp'
+                      ? '°C'
+                      : dataKey === 'humidity'
+                      ? '%'
+                      : dataKey === 'co' || dataKey === 'lpg' || dataKey === 'smoke'
+                      ? 'ppm'
+                      : ''
+                  })`,
+                  data: predictionData,
+                  borderColor: 'rgba(255, 99, 132, 1)',
+                  backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                  borderWidth: 0,
+                  pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                  pointRadius: 5,
+                  pointHoverRadius: 7,
+                  showLine: false,
+                },
+              ]),
         ],
       };
     }
@@ -535,13 +608,15 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
         .filter((value): value is number => typeof value === 'number');
     }
 
-    // Incluir las predicciones en el cálculo del rango
-    const devicePredictions = predictionsHistory[device] || {};
-    const dataTypePredictions = devicePredictions[dataKey] || [];
-    const predictionValues = dataTypePredictions.map(
-      (pred: { timestamp: string; predictedValue: number; actualValue: number | null }) => pred.predictedValue
-    );
-    values.push(...predictionValues);
+    // Incluir las predicciones en el cálculo del rango solo para los tipos de datos seleccionados
+    if (['temp', 'humidity', 'airQuality', 'co', 'lpg', 'smoke'].includes(dataKey)) {
+      const devicePredictions = predictionsHistory[device] || {};
+      const dataTypePredictions = devicePredictions[dataKey] || [];
+      const predictionValues = dataTypePredictions.map(
+        (pred: { timestamp: string; predictedValue: number; actualValue: number | null }) => pred.predictedValue
+      );
+      values.push(...predictionValues);
+    }
 
     if (values.length === 0) return { min: 0, max: 100, stepSize: 10 };
 
@@ -648,22 +723,10 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
         second: '2-digit',
       })
     );
-    const devicePredictions = predictionsHistory[showHistory.device] || {};
-    const dataTypePredictions = devicePredictions[showHistory.dataType] || [];
-    const predictionLabels = dataTypePredictions.map(
-      (pred: { timestamp: string; predictedValue: number; actualValue: number | null }) =>
-        new Date(pred.timestamp).toLocaleTimeString('es-ES', {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        })
-    );
-    const uniqueLabels = Array.from(new Set([...labels, ...predictionLabels]));
-    chartLabels = uniqueLabels.sort((a, b) => {
-      const timeA = new Date(`1970-01-01T${a}`).getTime();
-      const timeB = new Date(`1970-01-01T${b}`).getTime();
-      return timeA - timeB;
-    });
+    // Añadir "Predicción" solo si el tipo de dato tiene predicciones
+    chartLabels = ['temp', 'humidity', 'airQuality', 'co', 'lpg', 'smoke'].includes(showHistory.dataType)
+      ? [...labels, 'Predicción']
+      : labels;
   }
 
   // Generamos una lista de todas las tarjetas visibles para mostrarlas en una sola cuadrícula
@@ -1040,25 +1103,26 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                           }
 
                           if (datasetIndex === 1) {
-                            // Predicción
+                            // Predicción (solo para temp, humidity, airQuality, co, lpg, smoke)
                             const predEntry = (predictionsHistory[showHistory.device]?.[showHistory.dataType] || []).find(
                               (pred) =>
                                 new Date(pred.timestamp).toLocaleTimeString('es-ES', {
                                   hour: '2-digit',
                                   minute: '2-digit',
                                   second: '2-digit',
-                                }) === timestamp
+                                }) === (timestamp === 'Predicción' ? chartLabels[chartLabels.length - 2] : timestamp)
                             );
                             let actualValueStr = 'N/A';
                             if (predEntry && predEntry.actualValue !== null) {
                               const actualValue = predEntry.actualValue;
-                              if (showHistory.dataType === 'light') {
-                                actualValueStr = actualValue === 1 ? 'Encendido' : actualValue === 0 ? 'Apagado' : 'N/A';
-                              } else if (showHistory.dataType === 'motion') {
-                                actualValueStr = actualValue === 1 ? 'Sí' : actualValue === 0 ? 'No' : 'N/A';
-                              } else {
-                                actualValueStr = actualValue.toString();
-                              }
+                              actualValueStr = actualValue.toString();
+                            }
+                            if (timestamp === 'Predicción') {
+                              return [
+                                `${label}: ${valueStr} (Predicción)`,
+                                `Valor Real: ${actualValueStr}`,
+                                `Hora: ${chartLabels[chartLabels.length - 2]}`,
+                              ];
                             }
                             return [
                               `${label}: ${valueStr} (Predicción)`,
@@ -1067,8 +1131,24 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                             ];
                           } else {
                             // Dato real
+                            const predEntry = (predictionsHistory[showHistory.device]?.[showHistory.dataType] || []).find(
+                              (pred) =>
+                                new Date(pred.timestamp).toLocaleTimeString('es-ES', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  second: '2-digit',
+                                }) === timestamp
+                            );
+                            let predictedValueStr = 'N/A';
+                            if (predEntry) {
+                              const predictedValue = predEntry.predictedValue;
+                              predictedValueStr = predictedValue.toString();
+                            }
                             return [
                               `${label}: ${valueStr} (Real)`,
+                              ...(showHistory.dataType === 'light' || showHistory.dataType === 'motion'
+                                ? []
+                                : [`Predicción: ${predictedValueStr}`]),
                               `Hora: ${timestamp}`,
                             ];
                           }
