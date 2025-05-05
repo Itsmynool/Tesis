@@ -205,32 +205,25 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                 const nextData = updatedData[i + 1];
                 const predictionTimestamp = nextData.ts; // La predicción se alinea con el siguiente dato histórico
 
-                // Calcular el valor predicho
                 let predictedValue: number;
-                if (dataKey === 'airQuality') {
-                  const currentAirQuality = Math.min(
-                    100,
-                    Math.max(
-                      0,
-                      100 - ((currentData.co * 10000 + currentData.lpg * 10000 + (currentData.smoke ? 50 : 0)) / 100)
-                    )
-                  );
-                  const nextAirQuality = Math.min(
-                    100,
-                    Math.max(
-                      0,
-                      100 - ((nextData.co * 10000 + nextData.lpg * 10000 + (nextData.smoke ? 50 : 0)) / 100)
-                    )
-                  );
-                  const trend = nextAirQuality - currentAirQuality;
-                  predictedValue = currentAirQuality + trend;
-                } else {
-                  predictedValue = predictNextValue(updatedData.slice(0, i + 1), dataKey);
-                }
-
-                // Obtener el valor real para este timestamp
                 let actualValue: number | null = null;
+
                 if (dataKey === 'airQuality') {
+                  // Predecir valores individuales de co, lpg y smoke
+                  const coPredicted = predictNextValue(updatedData.slice(0, i + 1), 'co');
+                  const lpgPredicted = predictNextValue(updatedData.slice(0, i + 1), 'lpg');
+                  const smokePredicted = predictNextValue(updatedData.slice(0, i + 1), 'smoke');
+
+                  // Calcular calidad del aire predicha basada en los valores predichos
+                  predictedValue = Math.min(
+                    100,
+                    Math.max(
+                      0,
+                      100 - ((coPredicted * 10000 + lpgPredicted * 10000 + (smokePredicted > 0 ? 50 : 0)) / 100)
+                    )
+                  );
+
+                  // Valor real de calidad del aire
                   actualValue = Math.min(
                     100,
                     Math.max(
@@ -238,7 +231,10 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                       100 - ((nextData.co * 10000 + nextData.lpg * 10000 + (nextData.smoke ? 50 : 0)) / 100)
                     )
                   );
+
+                  console.log(`Predicción airQuality para ${device} en ${predictionTimestamp}: co=${coPredicted}, lpg=${lpgPredicted}, smoke=${smokePredicted}, airQuality=${predictedValue}, actual=${actualValue}`);
                 } else {
+                  predictedValue = predictNextValue(updatedData.slice(0, i + 1), dataKey);
                   actualValue = nextData[dataKey as keyof SensorData] as number;
                 }
 
@@ -256,24 +252,17 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
 
                 let futurePredictedValue: number;
                 if (dataKey === 'airQuality') {
-                  const lastData = updatedData[updatedData.length - 1];
-                  const secondLastData = updatedData[updatedData.length - 2];
-                  const lastAirQuality = Math.min(
+                  const coFuture = predictNextValue(updatedData, 'co');
+                  const lpgFuture = predictNextValue(updatedData, 'lpg');
+                  const smokeFuture = predictNextValue(updatedData, 'smoke');
+                  futurePredictedValue = Math.min(
                     100,
                     Math.max(
                       0,
-                      100 - ((lastData.co * 10000 + lastData.lpg * 10000 + (lastData.smoke ? 50 : 0)) / 100)
+                      100 - ((coFuture * 10000 + lpgFuture * 10000 + (smokeFuture > 0 ? 50 : 0)) / 100)
                     )
                   );
-                  const secondLastAirQuality = Math.min(
-                    100,
-                    Math.max(
-                      0,
-                      100 - ((secondLastData.co * 10000 + secondLastData.lpg * 10000 + (secondLastData.smoke ? 50 : 0)) / 100)
-                    )
-                  );
-                  const trend = lastAirQuality - secondLastAirQuality;
-                  futurePredictedValue = lastAirQuality + trend;
+                  console.log(`Predicción futura airQuality para ${device} en ${predictionTimestamp}: co=${coFuture}, lpg=${lpgFuture}, smoke=${smokeFuture}, airQuality=${futurePredictedValue}`);
                 } else {
                   futurePredictedValue = predictNextValue(updatedData, dataKey);
                 }
@@ -318,7 +307,7 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
     if (!showHistory) {
       setFilteredData([]);
     }
-  }, [deviceHistories, availableDevices, showHistory]); // Dependencia en deviceHistories y availableDevices
+  }, [deviceHistories, availableDevices, showHistory]);
 
   // Cerrar los dropdowns al hacer clic fuera de ellos
   useEffect(() => {
@@ -553,21 +542,52 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
       };
     }
 
-    console.log('Datos del gráfico:', chartData);
+    console.log(`Datos del gráfico para ${dataKey} (${device}):`, chartData);
     return chartData;
   };
 
   const predictNextValue = (history: SensorData[], dataKey: string): number => {
     if (history.length < 2) {
-      return history.length > 0 ? (history[history.length - 1][dataKey as keyof SensorData] as number) : 0;
+      const lastValue = history.length > 0 ? (history[history.length - 1][dataKey as keyof SensorData] as number) : 0;
+      console.log(`No hay suficientes datos para predecir ${dataKey}, usando último valor: ${lastValue}`);
+      return lastValue;
     }
 
     const lastValue = history[history.length - 1][dataKey as keyof SensorData] as number;
     const secondLastValue = history[history.length - 2][dataKey as keyof SensorData] as number;
 
     const trend = lastValue - secondLastValue;
-    const predicted = lastValue + trend;
-    console.log(`Predicción para ${dataKey}: lastValue=${lastValue}, secondLastValue=${secondLastValue}, trend=${trend}, predicted=${predicted}`);
+    let predicted: number;
+
+    // Calcular variabilidad basada en la tendencia histórica
+    const historicalVariability = history.reduce((acc, curr, idx) => {
+      if (idx > 0) {
+        const prev = history[idx - 1][dataKey as keyof SensorData] as number;
+        acc += Math.abs((curr[dataKey as keyof SensorData] as number) - prev);
+      }
+      return acc;
+    }, 0) / (history.length - 1);
+
+    const variabilityFactor = historicalVariability * 0.10 * (Math.random() * 2 - 1); // ±10% de variabilidad
+
+    if (dataKey === 'airQuality') {
+      // No se usa directamente aquí porque airQuality se calcula a partir de co, lpg y smoke
+      predicted = lastValue + trend + variabilityFactor;
+    } else if (dataKey === 'co' || dataKey === 'lpg') {
+      // Para co y lpg, aseguramos que no sean negativos
+      predicted = Math.max(0, lastValue + trend + variabilityFactor);
+    } else if (dataKey === 'smoke') {
+      // Para smoke, aplicamos variabilidad y lo tratamos como un valor continuo
+      predicted = Math.max(0, lastValue + trend + variabilityFactor);
+    } else {
+      // Para temp y humidity
+      predicted = lastValue + trend + variabilityFactor;
+      if (dataKey === 'humidity') {
+        predicted = Math.min(100, Math.max(0, predicted));
+      }
+    }
+
+    console.log(`Predicción para ${dataKey}: lastValue=${lastValue}, secondLastValue=${secondLastValue}, trend=${trend}, variability=${variabilityFactor}, predicted=${predicted}`);
     return predicted;
   };
 
@@ -1116,7 +1136,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                             if (timestamp === 'Predicción') {
                               return [
                                 `${label}: ${valueStr} (Predicción)`,
-                                `Valor Real: ${actualValueStr}`,
                                 `Hora: ${chartLabels[chartLabels.length - 2]}`,
                               ];
                             }
