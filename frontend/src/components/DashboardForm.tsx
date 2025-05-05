@@ -1028,10 +1028,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                         <SmokeIndicator smokeValue={data.smoke} />
                       </div>
                       <div className="text-xl font-bold text-gray-800 mt-2">
-                        {data.smoke !== undefined && data.smoke !== null
-                          ? data.smoke.toFixed(6)
-                          : 'N/A'}{' '}
-                        PPM
                       </div>
                     </div>
                   </div>

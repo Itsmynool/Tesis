@@ -37,14 +37,22 @@ const SmokeIndicator: React.FC<SmokeIndicatorProps> = ({ smokeValue }) => {
             position: relative;
             width: 100%;
             height: 100%;
-            top: 0%;
-            left: 0%;
-            z-index: 0; /* Reducir z-index para que no tape el texto debajo */
             display: flex;
+            flex-direction: column; /* Colocar elementos en columna */
             justify-content: center;
             align-items: center;
             background-color: transparent;
-            overflow: visible; /* Asegurar que no haya desbordamiento */
+            overflow: visible;
+          }
+
+          .nube-container {
+            position: relative;
+            width: 100px; /* Ajustar tamaño del contenedor de la nube */
+            height: 100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 0; /* Asegurar que la nube esté detrás */
           }
 
           .nube {
@@ -143,15 +151,32 @@ const SmokeIndicator: React.FC<SmokeIndicatorProps> = ({ smokeValue }) => {
               -webkit-transform: translate(-10px, 4px);
             }
           }
+
+          .smoke-value {
+            position: relative;
+            z-index: 1; /* Asegurar que el texto esté delante de la nube */
+            margin-top: 8px; /* Espacio entre la nube y el texto */
+            font-size: 1.25rem; /* Tamaño de fuente más grande */
+            font-weight: 700; /* Negrita */
+            color: #1f2937; /* Color gris oscuro */
+            text-align: center;
+          }
         `}
       </style>
-      <div id="cielito" className="w-16 h-16 relative">
-        <div className="nube" ref={nubeRef}>
-          <div></div>
-          <div></div>
-          <div></div>
-          <div></div>
-          <div></div>
+      <div id="cielito" className="w-16 h-16">
+        <div className="nube-container">
+          <div className="nube" ref={nubeRef}>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+          </div>
+        </div>
+        <div className="smoke-value">
+          {smokeValue !== undefined && smokeValue !== null
+            ? `${smokeValue.toFixed(6)} PPM`
+            : 'N/A'}
         </div>
       </div>
     </>
