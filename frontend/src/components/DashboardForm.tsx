@@ -81,7 +81,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
   const [predictionsHistory, setPredictionsHistory] = useState<
     Record<string, Record<string, { timestamp: string; predictedValue: number; actualValue: number | null }[]>>
   >(() => {
-    // Cargar desde localStorage al montar el componente
     const saved = localStorage.getItem('predictionsHistory');
     return saved ? JSON.parse(saved) : {};
   });
@@ -95,7 +94,7 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
   const deviceButtonRef = useRef<HTMLButtonElement>(null);
   const dataButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Estado para la visibilidad de datos por dispositivo
+  // Estado para la visibilidad de datos por dispositivo, inicializado desde localStorage
   const [cardVisibilityByDevice, setCardVisibilityByDevice] = useState<
     Record<
       string,
@@ -111,9 +110,10 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
       }
     >
   >(() => {
-    const initialVisibility: Record<string, any> = {};
+    const saved = localStorage.getItem('cardVisibilityByDevice');
+    const defaultVisibility: Record<string, any> = {};
     availableDevices.forEach(device => {
-      initialVisibility[device] = {
+      defaultVisibility[device] = {
         temperature: false,
         humidity: false,
         airQuality: false,
@@ -124,36 +124,53 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
         smoke: false,
       };
     });
+    const initialVisibility = saved ? JSON.parse(saved) : defaultVisibility;
+
+    // Asegurarse de que todos los dispositivos disponibles estén presentes
+    availableDevices.forEach((device, index) => {
+      if (!initialVisibility[device]) {
+        const isFirstDevice = index === 0;
+        initialVisibility[device] = {
+          temperature: isFirstDevice,
+          humidity: isFirstDevice,
+          airQuality: isFirstDevice,
+          light: isFirstDevice,
+          co: isFirstDevice,
+          lpg: isFirstDevice,
+          motion: isFirstDevice,
+          smoke: isFirstDevice,
+        };
+      }
+    });
+
     return initialVisibility;
   });
 
+  // Guardar cardVisibilityByDevice en localStorage cada vez que cambie
+  useEffect(() => {
+    localStorage.setItem('cardVisibilityByDevice', JSON.stringify(cardVisibilityByDevice));
+  }, [cardVisibilityByDevice]);
+
   // Estado para controlar qué dispositivo está seleccionado para configurar
   const [selectedDeviceForConfig, setSelectedDeviceForConfig] = useState<string | null>(null);
-
-  // Depuración de los estados de los dropdowns
-  useEffect(() => {
-    console.log('Estado de isDeviceDropdownOpen:', isDeviceDropdownOpen);
-  }, [isDeviceDropdownOpen]);
-
-  useEffect(() => {
-    console.log('Estado de isDataDropdownOpen:', isDataDropdownOpen);
-  }, [isDataDropdownOpen]);
 
   // Actualizamos cardVisibilityByDevice cuando cambian los dispositivos disponibles
   useEffect(() => {
     setCardVisibilityByDevice(prev => {
       const updatedVisibility: Record<string, any> = { ...prev };
-      availableDevices.forEach(device => {
+      availableDevices.forEach((device, index) => {
         if (!updatedVisibility[device]) {
+          // Si es el primer dispositivo y no hay selección previa, seleccionar todos los datos por defecto
+          const isFirstDevice = index === 0 && !Object.values(prev).some(device => Object.values(device).some(val => val));
           updatedVisibility[device] = {
-            temperature: false,
-            humidity: false,
-            airQuality: false,
-            light: false,
-            co: false,
-            lpg: false,
-            motion: false,
-            smoke: false,
+            temperature: isFirstDevice,
+            humidity: isFirstDevice,
+            airQuality: isFirstDevice,
+            light: isFirstDevice,
+            co: isFirstDevice,
+            lpg: isFirstDevice,
+            motion: isFirstDevice,
+            smoke: isFirstDevice,
           };
         }
       });
@@ -167,14 +184,12 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
     if (availableDevices.length > 0 && !selectedDeviceForConfig) {
       setSelectedDeviceForConfig(availableDevices[0]);
     }
-  }, [availableDevices]);
+  }, [availableDevices, selectedDeviceForConfig]);
 
   // Generar predicciones para los dispositivos y tipos de datos seleccionados
   useEffect(() => {
-    // Definir los tipos de datos para los cuales se generarán predicciones (excluyendo light y motion)
     const dataTypes = ['temp', 'humidity', 'airQuality', 'co', 'lpg', 'smoke'];
 
-    // Recorrer todos los dispositivos
     availableDevices.forEach((device) => {
       const deviceHistory = deviceHistories[device] || [];
       const updatedData = deviceHistory.map((item: SensorData) => {
@@ -182,39 +197,31 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
         return { ...item, ts };
       });
 
-      // Actualizar filteredData solo para el dispositivo seleccionado en showHistory
       if (showHistory && showHistory.device === device) {
         setFilteredData(updatedData);
-        console.log(`filteredData actualizado para ${showHistory.device}:`, updatedData);
       }
 
-      // Generar predicciones para cada tipo de dato seleccionado
       dataTypes.forEach((dataKey) => {
-        // Generar predicciones solo si hay al menos 2 datos
         if (updatedData.length >= 2) {
-          // Inicializar el historial de predicciones para este dispositivo y tipo de dato
           setPredictionsHistory(
             (prev: Record<string, Record<string, { timestamp: string; predictedValue: number; actualValue: number | null }[]>>) => {
               const devicePredictions = prev[device] || {};
               const dataTypePredictions = devicePredictions[dataKey] || [];
 
-              // Generar predicciones para cada punto del historial (excepto el último)
               const newPredictions: { timestamp: string; predictedValue: number; actualValue: number | null }[] = [];
-              for (let i = 0; i < updatedData.length - 1; i++) {
+              for (let i = 1; i < updatedData.length - 1; i++) {
                 const currentData = updatedData[i];
                 const nextData = updatedData[i + 1];
-                const predictionTimestamp = nextData.ts; // La predicción se alinea con el siguiente dato histórico
+                const predictionTimestamp = nextData.ts;
 
                 let predictedValue: number;
                 let actualValue: number | null = null;
 
                 if (dataKey === 'airQuality') {
-                  // Predecir valores individuales de co, lpg y smoke
                   const coPredicted = predictNextValue(updatedData.slice(0, i + 1), 'co');
                   const lpgPredicted = predictNextValue(updatedData.slice(0, i + 1), 'lpg');
                   const smokePredicted = predictNextValue(updatedData.slice(0, i + 1), 'smoke');
 
-                  // Calcular calidad del aire predicha basada en los valores predichos
                   predictedValue = Math.min(
                     100,
                     Math.max(
@@ -223,7 +230,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                     )
                   );
 
-                  // Valor real de calidad del aire
                   actualValue = Math.min(
                     100,
                     Math.max(
@@ -231,8 +237,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                       100 - ((nextData.co * 10000 + nextData.lpg * 10000 + (nextData.smoke ? 50 : 0)) / 100)
                     )
                   );
-
-                  console.log(`Predicción airQuality para ${device} en ${predictionTimestamp}: co=${coPredicted}, lpg=${lpgPredicted}, smoke=${smokePredicted}, airQuality=${predictedValue}, actual=${actualValue}`);
                 } else {
                   predictedValue = predictNextValue(updatedData.slice(0, i + 1), dataKey);
                   actualValue = nextData[dataKey as keyof SensorData] as number;
@@ -245,7 +249,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                 });
               }
 
-              // Generar una predicción futura para el último dato
               if (updatedData.length >= 2) {
                 const lastTimestamp = new Date(updatedData[updatedData.length - 1].ts);
                 const predictionTimestamp = new Date(lastTimestamp.getTime() + 30 * 1000).toISOString();
@@ -262,7 +265,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                       100 - ((coFuture * 10000 + lpgFuture * 10000 + (smokeFuture > 0 ? 50 : 0)) / 100)
                     )
                   );
-                  console.log(`Predicción futura airQuality para ${device} en ${predictionTimestamp}: co=${coFuture}, lpg=${lpgFuture}, smoke=${smokeFuture}, airQuality=${futurePredictedValue}`);
                 } else {
                   futurePredictedValue = predictNextValue(updatedData, dataKey);
                 }
@@ -274,7 +276,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                 });
               }
 
-              // Mantener solo predicciones dentro del rango de los últimos 50 datos
               const earliestTimestamp = updatedData.length > 50
                 ? new Date(updatedData[updatedData.length - 50].ts).getTime()
                 : updatedData.length > 0
@@ -284,7 +285,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                 (pred) => new Date(pred.timestamp).getTime() >= earliestTimestamp
               );
 
-              // Evitar duplicados para el mismo timestamp
               filteredPredictions = filteredPredictions.filter(
                 (pred, index, self) =>
                   index === self.findIndex((p) => p.timestamp === pred.timestamp)
@@ -303,17 +303,14 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
       });
     });
 
-    // Si no hay showHistory, limpiar filteredData
     if (!showHistory) {
       setFilteredData([]);
     }
   }, [deviceHistories, availableDevices, showHistory]);
 
-  // Cerrar los dropdowns al hacer clic fuera de ellos
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      console.log('Clic detectado fuera, target:', target);
       const deviceDropdownContent = document.querySelector('.dropdown-content');
       const dataDropdownContent = document.querySelector('.dropdown-content');
 
@@ -322,7 +319,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
         !deviceButtonRef.current.contains(target) &&
         (!deviceDropdownContent || !deviceDropdownContent.contains(target))
       ) {
-        console.log('Clic fuera del botón de dispositivos, cerrando...');
         setIsDeviceDropdownOpen(false);
       }
       if (
@@ -330,7 +326,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
         !dataButtonRef.current.contains(target) &&
         (!dataDropdownContent || !dataDropdownContent.contains(target))
       ) {
-        console.log('Clic fuera del botón de datos, cerrando...');
         setIsDataDropdownOpen(false);
       }
     };
@@ -345,10 +340,8 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
     const deviceHistory = deviceHistories[device] || [];
     if (deviceHistory.length === 0) return { labels: [], datasets: [] };
 
-    // Limitar a los últimos 50 datos históricos
     const sampledData = deviceHistory.slice(-50);
 
-    // Crear un array de objetos con timestamps y valores históricos
     const historicalEntries = sampledData.map((item: SensorData) => {
       let value: number;
       if (dataKey === 'airQuality') {
@@ -368,11 +361,9 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
       return { timestamp: item.ts, value };
     });
 
-    // Obtener el historial de predicciones para este dispositivo y tipo de dato
     const devicePredictions = predictionsHistory[device] || {};
     const dataTypePredictions = devicePredictions[dataKey] || [];
 
-    // Separar predicciones históricas y la predicción futura
     const historicalPredictions = dataTypePredictions.filter(
       (pred) => pred.actualValue !== null
     );
@@ -382,37 +373,33 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
         : null
       : null;
 
-    // Crear un array de timestamps solo con los datos históricos
     const historicalTimestamps = historicalEntries.map((entry) => entry.timestamp);
     const uniqueTimestamps = Array.from(new Set(historicalTimestamps)).sort(
       (a, b) => new Date(a).getTime() - new Date(b).getTime()
     );
 
-    // Añadir el timestamp de la predicción futura si existe y si el tipo de dato tiene predicciones
-    if (futurePrediction && ['temp', 'humidity', 'airQuality', 'co', 'lpg', 'smoke'].includes(dataKey)) {
+    if (futurePrediction && deviceHistory.length >= 2 && ['temp', 'humidity', 'airQuality', 'co', 'lpg', 'smoke'].includes(dataKey)) {
       uniqueTimestamps.push(futurePrediction.timestamp);
     }
 
-    // Generar etiquetas (formato de hora), asegurando que el último punto sea "Predicción" si existe
-    const allLabels = uniqueTimestamps.map((ts, index) =>
-      index === uniqueTimestamps.length - 1 && futurePrediction && ['temp', 'humidity', 'airQuality', 'co', 'lpg', 'smoke'].includes(dataKey)
-        ? 'Predicción'
-        : new Date(ts).toLocaleTimeString('es-ES', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-          })
-    );
+    const allLabels = uniqueTimestamps.map((ts, index) => {
+      if (index === uniqueTimestamps.length - 1 && futurePrediction && ['temp', 'humidity', 'airQuality', 'co', 'lpg', 'smoke'].includes(dataKey)) {
+        return 'Predicción';
+      }
+      return new Date(ts).toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+    });
 
-    // Mapear datos históricos a las posiciones correctas
     const historicalData = uniqueTimestamps.map((ts) => {
       const entry = historicalEntries.find((hist) => hist.timestamp === ts);
       return entry ? entry.value : null;
     });
 
-    // Mapear datos de predicciones: incluir tanto las predicciones históricas como la futura (solo para los tipos de datos seleccionados)
     let predictionData: (number | null)[] = [];
-    if (['temp', 'humidity', 'airQuality', 'co', 'lpg', 'smoke'].includes(dataKey)) {
+    if (['temp', 'humidity', 'airQuality', 'co', 'lpg', 'smoke'].includes(dataKey) && deviceHistory.length >= 2) {
       predictionData = uniqueTimestamps.map((ts) => {
         const historicalPred = historicalPredictions.find((pred) => pred.timestamp === ts);
         if (historicalPred) {
@@ -436,7 +423,7 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
           {
             label: 'Calidad del Aire (%)',
             data: historicalData,
-            borderColor: 'rgba(75, 192, 192, 1)', // Verde claro para calidad del aire
+            borderColor: 'rgba(75, 192, 192, 1)',
             backgroundColor: 'rgba(75, 192, 192, 0.2)',
             tension: 0.3,
             fill: false,
@@ -448,7 +435,7 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
           {
             label: 'Predicciones de Calidad del Aire (%)',
             data: predictionData,
-            borderColor: 'rgba(255, 99, 132, 1)', // Rojo para predicciones
+            borderColor: 'rgba(255, 99, 132, 1)',
             backgroundColor: 'rgba(255, 99, 132, 0.2)',
             borderWidth: 0,
             pointBackgroundColor: 'rgba(255, 99, 132, 1)',
@@ -465,7 +452,7 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
           {
             label: `Humedad (%)`,
             data: historicalData,
-            borderColor: 'rgba(54, 162, 235, 1)', // Azul claro para humedad
+            borderColor: 'rgba(54, 162, 235, 1)',
             backgroundColor: 'rgba(54, 162, 235, 0.2)',
             tension: 0.3,
             fill: false,
@@ -542,60 +529,26 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
       };
     }
 
-    console.log(`Datos del gráfico para ${dataKey} (${device}):`, chartData);
     return chartData;
   };
 
   const predictNextValue = (history: SensorData[], dataKey: string): number => {
     if (history.length < 2) {
       const lastValue = history.length > 0 ? (history[history.length - 1][dataKey as keyof SensorData] as number) : 0;
-      console.log(`No hay suficientes datos para predecir ${dataKey}, usando último valor: ${lastValue}`);
       return lastValue;
     }
 
     const lastValue = history[history.length - 1][dataKey as keyof SensorData] as number;
     const secondLastValue = history[history.length - 2][dataKey as keyof SensorData] as number;
-
     const trend = lastValue - secondLastValue;
-    let predicted: number;
-
-    // Calcular variabilidad basada en la tendencia histórica
-    const historicalVariability = history.reduce((acc, curr, idx) => {
-      if (idx > 0) {
-        const prev = history[idx - 1][dataKey as keyof SensorData] as number;
-        acc += Math.abs((curr[dataKey as keyof SensorData] as number) - prev);
-      }
-      return acc;
-    }, 0) / (history.length - 1);
-
-    const variabilityFactor = historicalVariability * 0.10 * (Math.random() * 2 - 1); // ±10% de variabilidad
-
-    if (dataKey === 'airQuality') {
-      // No se usa directamente aquí porque airQuality se calcula a partir de co, lpg y smoke
-      predicted = lastValue + trend + variabilityFactor;
-    } else if (dataKey === 'co' || dataKey === 'lpg') {
-      // Para co y lpg, aseguramos que no sean negativos
-      predicted = Math.max(0, lastValue + trend + variabilityFactor);
-    } else if (dataKey === 'smoke') {
-      // Para smoke, aplicamos variabilidad y lo tratamos como un valor continuo
-      predicted = Math.max(0, lastValue + trend + variabilityFactor);
-    } else {
-      // Para temp y humidity
-      predicted = lastValue + trend + variabilityFactor;
-      if (dataKey === 'humidity') {
-        predicted = Math.min(100, Math.max(0, predicted));
-      }
-    }
-
-    console.log(`Predicción para ${dataKey}: lastValue=${lastValue}, secondLastValue=${secondLastValue}, trend=${trend}, variability=${variabilityFactor}, predicted=${predicted}`);
-    return predicted;
+    const predicted = lastValue + trend;
+    return Math.max(0, predicted);
   };
 
   const getDynamicAxisRange = (dataKey: string, device: string) => {
     const deviceHistory = deviceHistories[device] || [];
     if (deviceHistory.length === 0) return { min: 0, max: 100, stepSize: 10 };
 
-    // Limitar a los últimos 50 datos para el cálculo del rango
     const recentHistory = deviceHistory.slice(-50);
 
     let values: number[] = [];
@@ -628,7 +581,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
         .filter((value): value is number => typeof value === 'number');
     }
 
-    // Incluir las predicciones en el cálculo del rango solo para los tipos de datos seleccionados
     if (['temp', 'humidity', 'airQuality', 'co', 'lpg', 'smoke'].includes(dataKey)) {
       const devicePredictions = predictionsHistory[device] || {};
       const dataTypePredictions = devicePredictions[dataKey] || [];
@@ -669,7 +621,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
       stepSize = (adjustedMax - adjustedMin) / 10;
     }
 
-    console.log(`Rango del eje Y para ${dataKey}: min=${adjustedMin}, max=${adjustedMax}, stepSize=${stepSize}`);
     return {
       min: adjustedMin,
       max: adjustedMax,
@@ -677,7 +628,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
     };
   };
 
-  // Función para manejar el cambio de visibilidad de datos por dispositivo
   const handleCardVisibilityChange = (
     device: string,
     card: keyof typeof cardVisibilityByDevice[string]
@@ -691,14 +641,12 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
     }));
   };
 
-  // Función para manejar el clic en "Ver Historial" y cerrar dropdowns
   const handleShowHistory = (
     event: React.MouseEvent<HTMLButtonElement>,
     device: string,
     dataType: string
   ) => {
     event.stopPropagation();
-    console.log(`Clic en Ver Historial para ${device}, tipo: ${dataType}`);
     setIsDeviceDropdownOpen(false);
     setIsDataDropdownOpen(false);
     setShowHistory(
@@ -708,21 +656,17 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
     );
   };
 
-  // Funciones para manejar los dropdowns con onClick en botones
   const handleDeviceDropdownClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-    console.log('Clic en el botón de dispositivos');
     setIsDeviceDropdownOpen(prev => !prev);
   };
 
   const handleDataDropdownClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-    console.log('Clic en el botón de datos');
     setIsDataDropdownOpen(prev => !prev);
   };
 
   const handleDeviceSelect = (device: string) => {
-    console.log(`Dispositivo seleccionado: ${device}`);
     setSelectedDeviceForConfig(device);
     setIsDeviceDropdownOpen(false);
   };
@@ -731,7 +675,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
     ? getDynamicAxisRange(showHistory.dataType, showHistory.device)
     : { min: 0, max: 100, stepSize: 10 };
 
-  // Extraemos los labels para usarlos en las opciones del gráfico
   let chartLabels: string[] = [];
   if (showHistory) {
     const deviceHistory = deviceHistories[showHistory.device] || [];
@@ -743,13 +686,11 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
         second: '2-digit',
       })
     );
-    // Añadir "Predicción" solo si el tipo de dato tiene predicciones
     chartLabels = ['temp', 'humidity', 'airQuality', 'co', 'lpg', 'smoke'].includes(showHistory.dataType)
       ? [...labels, 'Predicción']
       : labels;
   }
 
-  // Generamos una lista de todas las tarjetas visibles para mostrarlas en una sola cuadrícula
   const visibleCards: { device: string; type: string; data: SensorData | null }[] = [];
   Object.keys(cardVisibilityByDevice).forEach(device => {
     const visibility = cardVisibilityByDevice[device];
@@ -766,11 +707,9 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
     <div className="space-y-6 w-full bg-gradient-to-br from-gray-900 via-indigo-900 to-purple-800 min-h-screen p-4">
       <style>{dropdownStyles}</style>
 
-      {/* Sección de botones alineados uno al lado del otro */}
       <div className="flex flex-col space-y-2">
         <h2 className="text-lg font-semibold text-gray-200">Tablero de Control</h2>
         <div className="button-wrapper">
-          {/* Botón de Selección de Dispositivos */}
           <div className="relative">
             <button
               ref={deviceButtonRef}
@@ -807,7 +746,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
             )}
           </div>
 
-          {/* Botón de Selección de Datos */}
           <div className="relative">
             {selectedDeviceForConfig ? (
               <>
@@ -875,7 +813,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
         </div>
       </div>
 
-      {/* Visualización de Datos en una sola cuadrícula con tamaños uniformes */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {visibleCards.map(({ device, type, data }, index) => {
           if (!data) return null;
@@ -1068,7 +1005,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
         })}
       </div>
 
-      {/* Sección de Historial */}
       {showHistory && (
         <div className="bg-gray-700 p-4 rounded-lg shadow-lg backdrop-blur-md">
           <div className="flex justify-between items-center mb-4">
@@ -1119,7 +1055,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                           }
 
                           if (datasetIndex === 1) {
-                            // Predicción (solo para temp, humidity, airQuality, co, lpg, smoke)
                             const predEntry = (predictionsHistory[showHistory.device]?.[showHistory.dataType] || []).find(
                               (pred) =>
                                 new Date(pred.timestamp).toLocaleTimeString('es-ES', {
@@ -1130,8 +1065,7 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                             );
                             let actualValueStr = 'N/A';
                             if (predEntry && predEntry.actualValue !== null) {
-                              const actualValue = predEntry.actualValue;
-                              actualValueStr = actualValue.toString();
+                              actualValueStr = predEntry.actualValue.toString();
                             }
                             if (timestamp === 'Predicción') {
                               return [
@@ -1145,7 +1079,6 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                               `Hora: ${timestamp}`,
                             ];
                           } else {
-                            // Dato real
                             const predEntry = (predictionsHistory[showHistory.device]?.[showHistory.dataType] || []).find(
                               (pred) =>
                                 new Date(pred.timestamp).toLocaleTimeString('es-ES', {
@@ -1156,8 +1089,7 @@ const DashboardForm: React.FC<DashboardFormProps> = ({
                             );
                             let predictedValueStr = 'N/A';
                             if (predEntry) {
-                              const predictedValue = predEntry.predictedValue;
-                              predictedValueStr = predictedValue.toString();
+                              predictedValueStr = predEntry.predictedValue.toString();
                             }
                             return [
                               `${label}: ${valueStr} (Real)`,

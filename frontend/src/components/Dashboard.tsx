@@ -11,11 +11,20 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
   const UPDATE_INTERVAL = 30000; // 30 segundos
   const MAX_HISTORY_ENTRIES = 100;
 
-  const [availableDevices, setAvailableDevices] = useState<string[]>([]);
+  const [availableDevices, setAvailableDevices] = useState<string[]>(() => {
+    return JSON.parse(localStorage.getItem('availableDevices') || '[]');
+  });
   const [deviceHistories, setDeviceHistories] = useState<Record<string, SensorData[]>>(() => {
     return JSON.parse(localStorage.getItem('deviceHistories') || '{}');
   });
-  const [data, setData] = useState<Record<string, SensorData | null>>({});
+  const [data, setData] = useState<Record<string, SensorData | null>>(() => {
+    const histories = JSON.parse(localStorage.getItem('deviceHistories') || '{}');
+    const initialData: Record<string, SensorData | null> = {};
+    Object.keys(histories).forEach(device => {
+      initialData[device] = histories[device]?.length > 0 ? histories[device][histories[device].length - 1] : null;
+    });
+    return initialData;
+  });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState<{ device: string; dataType: string } | null>(null);
@@ -23,6 +32,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
   const [timeRemaining, setTimeRemaining] = useState<number>(UPDATE_INTERVAL / 1000); // En segundos
   const [showUpdateNotification, setShowUpdateNotification] = useState<boolean>(false);
   const [isFirstLoad, setIsFirstLoad] = useState<boolean>(true);
+  const [isInitialFetchDone, setIsInitialFetchDone] = useState<boolean>(false);
   const navigate = useNavigate();
 
   const fetchAvailableDevices = async () => {
@@ -70,7 +80,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
             return updatedHistories;
           });
         } catch (err: any) {
-          console.error(`Error al obtener datos del dispositivo ${device}:`, err);
+          // Error silenciado según solicitud
         }
       }));
       setDeviceHistories(prevHistories => {
@@ -87,26 +97,46 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
         setTimeout(() => setShowUpdateNotification(false), 5000);
       }
       setIsFirstLoad(false);
-      // Reiniciamos el tiempo de inicio para la cuenta regresiva
       setStartTime(new Date());
       setTimeRemaining(UPDATE_INTERVAL / 1000);
     } catch (err: any) {
       setError('Error al obtener datos en tiempo real: ' + (err.message || 'Desconocido'));
     } finally {
       setLoading(false);
+      setIsInitialFetchDone(true); // Marcar como completado después de terminar el fetch
     }
   };
 
+  // Efecto para la inicialización de datos
   useEffect(() => {
-    fetchAvailableDevices();
-    fetchData();
-    const interval = setInterval(() => {
-      fetchData();
-    }, UPDATE_INTERVAL);
-    return () => clearInterval(interval);
+    let isMounted = true;
+    const initializeData = async () => {
+      const hasDevices = localStorage.getItem('availableDevices') && JSON.parse(localStorage.getItem('availableDevices') || '[]').length > 0;
+      const hasHistories = localStorage.getItem('deviceHistories') && Object.keys(JSON.parse(localStorage.getItem('deviceHistories') || '{}')).length > 0;
+
+      if (isMounted && (!hasDevices || !hasHistories)) {
+        await fetchAvailableDevices();
+        await fetchData();
+      } else if (isMounted) {
+        setIsInitialFetchDone(true); // Si ya hay datos, marcar como hecho
+      }
+    };
+
+    initializeData();
+    return () => { isMounted = false; };
   }, [token, navigate, setToken]);
 
-  // Cuenta regresiva
+  // Efecto para el intervalo de actualización
+  useEffect(() => {
+    if (!isInitialFetchDone) return; // No iniciar el intervalo hasta que el fetch inicial esté completo
+
+    const interval = setTimeout(() => {
+      fetchData();
+    }, UPDATE_INTERVAL);
+
+    return () => clearTimeout(interval);
+  }, [isInitialFetchDone, data]); // Dependencia en data para reiniciar el temporizador
+
   useEffect(() => {
     const timer = setInterval(() => {
       const now = new Date();
@@ -122,17 +152,15 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
   };
 
   const predictNextValue = (history: SensorData[], dataKey: string): number => {
-    if (history.length < 3
-    ) {
-      return history.length > 0 ? history[history.length - 1][dataKey as keyof SensorData] as number : 0;
+    if (history.length < 2) {
+      const lastValue = history.length > 0 ? history[history.length - 1][dataKey as keyof SensorData] as number : 0;
+      return lastValue;
     }
 
     const lastValue = history[history.length - 1][dataKey as keyof SensorData] as number;
     const secondLastValue = history[history.length - 2][dataKey as keyof SensorData] as number;
-
     const trend = lastValue - secondLastValue;
     const predicted = lastValue + trend;
-    console.log(`Predicción para ${dataKey}: lastValue=${lastValue}, secondLastValue=${secondLastValue}, trend=${trend}, predicted=${predicted}`);
     return predicted;
   };
 
@@ -161,10 +189,6 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
 
       const predictedValue = predictNextValue(deviceHistory, dataKey);
       const allLabels = [...labels, 'Predicción'];
-
-      console.log(`Datos históricos para ${dataKey} (dispositivo ${device}):`, historicalData);
-      console.log(`Valor predicho para ${dataKey}:`, predictedValue);
-      console.log(`Etiquetas (labels):`, allLabels);
 
       let chartData;
 
@@ -228,7 +252,6 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
         };
       }
 
-      console.log(`Datos de la gráfica para ${dataKey}:`, chartData);
       return chartData;
     }
     return { labels: [], datasets: [] };
@@ -317,17 +340,13 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
   const handleLogout = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     e.preventDefault();
-    console.log('Clic en Cerrar Sesión detectado');
     try {
-      console.log('Iniciando cierre de sesión...');
       setToken(null);
       localStorage.removeItem('token');
       sessionStorage.removeItem('token');
-      console.log('Token limpiado del estado y almacenamiento local');
       navigate('/HomePage', { replace: true });
-      console.log('Redirigiendo a /login');
     } catch (error) {
-      console.error('Error al cerrar sesión:', error);
+      // Error silenciado según solicitud
     }
   };
 
@@ -339,10 +358,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
           <div className="flex items-center space-x-4">
             <div className="text-sm text-gray-400">{getTimeSinceLastUpdate()}</div>
             <button
-              onClick={(e) => {
-                console.log('Evento onClick disparado en el botón Cerrar Sesión');
-                handleLogout(e);
-              }}
+              onClick={handleLogout}
               className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-300 z-50"
             >
               Cerrar Sesión
