@@ -1,0 +1,188 @@
+{
+	"info": {
+		"_postman_id": "3397b0a1-ebdf-4b84-8fc2-fbb1f6cacf9d",
+		"name": "backend-sensors",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "31469257"
+	},
+	"item": [
+		{
+			"name": "authentication",
+			"item": [
+				{
+					"name": "login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"peperson\",\n    \"password\": \"12345\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/api/auth/login",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "signup",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"peperson\",\n    \"password\": \"12345\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/api/auth/signup",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"signup"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "sensors",
+			"item": [
+				{
+					"name": "sensorDivices",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{URL}}/api/sensor/devices",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"sensor",
+								"devices"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "sensorRealtimeByDivice",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{URL}}/api/sensor/realtime/1c:bf:ce:15:ec:4d",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"sensor",
+								"realtime",
+								"1c:bf:ce:15:ec:4d"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "sensorHistoryByDivice",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{URL}}/api/sensor/history/00:0f:00:70:91:0a",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"sensor",
+								"history",
+								"00:0f:00:70:91:0a"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "getRoot",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{URL}}",
+					"host": [
+						"{{URL}}"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZTFhZDc2N2Y5NzRmYmU5NDZmYzAyYSIsInVzZXJuYW1lIjoicGVwZXJzb24iLCJpYXQiOjE3NDI4NDQ0OTcsImV4cCI6MTc0Mjg0ODA5N30.LBuBirr5PPnxKYMD_DaesEIT5TDWNs-zBFzPlDjwne0",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "URL",
+			"value": "http://localhost:5000",
+			"type": "string"
+		}
+	]
+}
