@@ -122,7 +122,8 @@ const Dashboard: React.FC<DashboardProps> = ({ token, setToken, devices }) => {
   };
 
   const predictNextValue = (history: SensorData[], dataKey: string): number => {
-    if (history.length < 2) {
+    if (history.length < 3
+    ) {
       return history.length > 0 ? history[history.length - 1][dataKey as keyof SensorData] as number : 0;
     }
 
