@@ -39,6 +39,6 @@ jobs:
         with:
           project: "itsmynool-tesis-83"
           entrypoint: "5000"
-          root: "backend"
+          root: "backend/"
           
           
