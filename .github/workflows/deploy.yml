@@ -38,7 +38,7 @@ jobs:
         uses: denoland/deployctl@v1
         with:
           project: "itsmynool-tesis-83"
-          entrypoint: "5000"
+          entrypoint: ""
           root: "backend/"
           
           
